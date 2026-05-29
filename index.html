@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swabhiman Sarangi - 3D Portfolio</title>
+    <title>Swabhiman Sarangi - Interactive 3D Portfolio</title>
     <script type="importmap">
     {
         "imports": {
@@ -16,35 +16,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
-    --sky-dark: #0f0c29;
-    --sky-mid: #302b63;
-    --sky-light: #24243e;
-    --coral: #ff7675;
-    --yellow: #fdcb6e;
-    --cyan: #00cec9;
-    --magenta: #fd79a8;
-    --fog: #1a1a2e;
-    --text-light: #f8f9fa;
-    --text-dim: #adb5bd;
-    --panel-bg: rgba(15, 12, 41, 0.92);
-    --panel-border: rgba(0, 206, 201, 0.3);
+    --bg-dark: #050510;
+    --primary: #00f3ff; /* Cyan */
+    --secondary: #bc13fe; /* Purple */
+    --accent: #ffd700; /* Gold */
+    --text-main: #ffffff;
+    --text-muted: #a0a0b0;
+    --glass: rgba(10, 10, 25, 0.85);
+    --glass-border: rgba(0, 243, 255, 0.3);
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: 'Space Mono', monospace;
-    color: var(--text-light);
-    overflow-x: hidden;
-    background: linear-gradient(180deg, var(--sky-dark) 0%, var(--sky-mid) 50%, var(--sky-light) 100%);
-    cursor: crosshair;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow: hidden; /* Prevent native scroll, we use custom wheel */
+    height: 100vh;
+    width: 100vw;
 }
 
-#webgl-canvas {
+#canvas-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -53,1932 +46,904 @@ body {
     z-index: 1;
 }
 
-/* Loading Screen */
-#loading-screen {
+/* --- UI LAYER --- */
+#ui-layer {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, var(--sky-dark) 0%, var(--sky-mid) 100%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 1s ease;
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass through to canvas where needed */
 }
 
-#loading-screen.fade-out {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.loader-container {
-    text-align: center;
-}
-
-.loader-ring {
+/* HUD Elements */
+.hud-top-left {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 150px;
-    height: 150px;
-    border: 3px solid transparent;
-    border-top-color: var(--cyan);
-    border-radius: 50%;
-    animation: spin 1.5s linear infinite;
-}
-
-.loader-ring:nth-child(2) {
-    width: 120px;
-    height: 120px;
-    border-top-color: var(--magenta);
-    animation-duration: 2s;
-    animation-direction: reverse;
-}
-
-.loader-ring:nth-child(3) {
-    width: 90px;
-    height: 90px;
-    border-top-color: var(--yellow);
-    animation-duration: 2.5s;
-}
-
-@keyframes spin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-.loader-container h2 {
-    font-family: 'Russo One', sans-serif;
-    font-size: 1.5rem;
-    margin-top: 200px;
-    color: var(--cyan);
-    text-shadow: 0 0 20px var(--cyan);
-    letter-spacing: 3px;
-}
-
-.loading-percentage {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--yellow);
-    margin-top: 20px;
-    text-shadow: 0 0 30px var(--yellow);
-}
-
-/* Scroll Hint */
-#scroll-hint {
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    text-align: center;
-    animation: fadeInUp 1s ease forwards, bounce 2s ease-in-out infinite;
-    animation-delay: 0s, 1s;
-    opacity: 0;
-}
-
-#scroll-hint.hidden {
-    display: none;
-}
-
-.scroll-icon {
-    width: 30px;
-    height: 50px;
-    border: 2px solid var(--cyan);
-    border-radius: 20px;
-    margin: 0 auto 10px;
-    position: relative;
-    box-shadow: 0 0 20px var(--cyan);
-}
-
-.scroll-wheel {
-    width: 4px;
-    height: 10px;
-    background: var(--cyan);
-    border-radius: 2px;
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    animation: scroll 1.5s ease-in-out infinite;
-}
-
-@keyframes scroll {
-    0%, 100% { top: 8px; opacity: 1; }
-    50% { top: 24px; opacity: 0.3; }
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-10px); }
-}
-
-@keyframes fadeInUp {
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-/* Zone Indicator */
-#zone-indicator {
-    position: fixed;
-    top: 30px;
-    right: 30px;
-    z-index: 100;
-    background: var(--panel-bg);
-    border: 2px solid var(--panel-border);
-    padding: 15px 30px;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 30px rgba(0, 206, 201, 0.2);
-}
-
-#zone-name {
-    font-family: 'Russo One', sans-serif;
-    font-size: 1.2rem;
-    color: var(--cyan);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 0 10px var(--cyan);
-}
-
-/* Progress Bar */
-#progress-container {
-    position: fixed;
     top: 30px;
     left: 30px;
-    width: 300px;
-    z-index: 100;
+    pointer-events: auto;
 }
 
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+.hud-top-right {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    text-align: right;
+    pointer-events: auto;
+}
+
+.zone-label {
+    font-family: 'Russo One', sans-serif;
+    font-size: 2rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    text-shadow: 0 0 15px var(--primary);
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+}
+
+.progress-track {
+    width: 200px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
     overflow: hidden;
-    border: 1px solid var(--panel-border);
+    margin-left: auto;
 }
 
-#progress-fill {
+.progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--cyan), var(--magenta));
-    border-radius: 10px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
     width: 0%;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 20px var(--cyan);
-}
-
-.progress-dots {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 15px;
-}
-
-.dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.dot.active {
-    background: var(--cyan);
-    border-color: var(--cyan);
-    box-shadow: 0 0 15px var(--cyan);
-    transform: scale(1.3);
+    transition: width 0.1s linear;
+    box-shadow: 0 0 10px var(--primary);
 }
 
 /* Content Panels */
-#content-panels {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 50;
-    pointer-events: none;
-}
-
-.panel {
+.content-panel {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    max-width: 800px;
-    width: 90%;
-    max-height: 80vh;
+    width: 800px;
+    max-width: 90%;
+    max-height: 75vh;
     overflow-y: auto;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    padding: 40px;
+    border-radius: 4px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    display: none; /* Hide completely when not active */
 }
 
-.panel.active {
+.content-panel.active {
     opacity: 1;
-    pointer-events: all;
-}
-
-.panel-content {
-    background: var(--panel-bg);
-    border: 3px solid var(--panel-border);
-    border-radius: 20px;
-    padding: 40px;
-    backdrop-filter: blur(15px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 206, 201, 0.2);
-}
-
-.panel-content h1, .panel-content h2, .panel-content h3 {
-    font-family: 'Russo One', sans-serif;
-    color: var(--cyan);
-    text-shadow: 0 0 20px var(--cyan);
-    margin-bottom: 20px;
-    letter-spacing: 2px;
-}
-
-.panel-content h1 {
-    font-size: 3rem;
-    text-align: center;
-}
-
-.panel-content h2 {
-    font-size: 2rem;
-    border-bottom: 3px solid var(--cyan);
-    padding-bottom: 15px;
-    margin-bottom: 30px;
-}
-
-.panel-content h3 {
-    font-size: 1.5rem;
-    margin-top: 30px;
-}
-
-/* Glitch Effect */
-.glitch-text {
-    position: relative;
-    animation: glitch 3s infinite;
-}
-
-@keyframes glitch {
-    0%, 100% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
-}
-
-/* Intro Panel */
-.subtitle {
-    text-align: center;
-    font-size: 1.3rem;
-    color: var(--yellow);
-    margin-bottom: 30px;
-    text-shadow: 0 0 15px var(--yellow);
-}
-
-.bio-container {
-    margin: 30px 0;
-}
-
-.bio-container p {
-    margin-bottom: 15px;
-    line-height: 1.8;
-    color: var(--text-dim);
-    font-size: 1.05rem;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 30px;
-}
-
-.stat-card {
-    background: rgba(0, 206, 201, 0.1);
-    border: 2px solid var(--cyan);
-    border-radius: 15px;
-    padding: 20px;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 206, 201, 0.3);
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.stat-value {
-    font-family: 'Russo One', sans-serif;
-    font-size: 1.5rem;
-    color: var(--cyan);
-    margin-top: 10px;
-    text-shadow: 0 0 10px var(--cyan);
-}
-
-/* Timeline */
-.timeline {
-    position: relative;
-}
-
-.timeline-item {
-    margin-bottom: 40px;
-    padding-left: 40px;
-    position: relative;
-    border-left: 3px solid var(--cyan);
-}
-
-.timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 0;
-    width: 13px;
-    height: 13px;
-    background: var(--cyan);
-    border-radius: 50%;
-    box-shadow: 0 0 15px var(--cyan);
-}
-
-.timeline-item h3 {
-    color: var(--yellow);
-    font-size: 1.3rem;
-    margin-bottom: 5px;
-}
-
-.timeline-company {
-    color: var(--magenta);
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.timeline-period {
-    color: var(--text-dim);
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-}
-
-.timeline-description {
-    color: var(--text-dim);
-    line-height: 1.7;
-}
-
-/* Projects Grid */
-.projects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-}
-
-.project-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid transparent;
-    border-radius: 15px;
-    padding: 25px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.project-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: -1;
-}
-
-.project-card:hover {
-    transform: translateY(-8px);
-    border-color: var(--cyan);
-    box-shadow: 0 15px 40px rgba(0, 206, 201, 0.3);
-}
-
-.project-card:hover::before {
-    opacity: 0.1;
-}
-
-.project-emoji {
-    font-size: 3rem;
-    margin-bottom: 15px;
+    pointer-events: auto;
     display: block;
+    transform: translate(-50%, -50%) scale(1);
 }
 
-.project-card h3 {
-    color: var(--cyan);
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-}
-
-.project-description {
-    color: var(--text-dim);
+.content-panel h2 {
+    font-family: 'Russo One', sans-serif;
+    color: var(--primary);
+    font-size: 2.5rem;
     margin-bottom: 20px;
-    line-height: 1.6;
+    border-bottom: 2px solid var(--secondary);
+    padding-bottom: 10px;
+    text-transform: uppercase;
 }
 
-.project-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.tag {
-    background: rgba(0, 206, 201, 0.2);
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
-}
-
-/* Skills Categories */
-.skills-categories {
-    display: grid;
-    gap: 30px;
-}
-
-.skill-category {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid var(--magenta);
-    border-radius: 15px;
-    padding: 25px;
-}
-
-.skill-category h3 {
-    color: var(--magenta);
-    font-size: 1.3rem;
-    margin-bottom: 20px;
-}
-
-.skill-item {
-    margin-bottom: 20px;
-}
-
-.skill-name {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    color: var(--text-light);
-}
-
-.skill-bar {
-    width: 100%;
-    height: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid var(--magenta);
-}
-
-.skill-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--magenta), var(--cyan));
-    border-radius: 10px;
-    transition: width 1s ease;
-    box-shadow: 0 0 15px var(--magenta);
-}
-
-/* Education */
-.education-list {
-    display: grid;
-    gap: 25px;
-}
-
-.education-item {
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid var(--yellow);
-    border-radius: 15px;
-    padding: 25px;
-    display: flex;
-    gap: 20px;
-    align-items: start;
-    transition: all 0.3s ease;
-}
-
-.education-item:hover {
-    transform: translateX(10px);
-    box-shadow: 0 10px 30px rgba(253, 203, 110, 0.2);
-}
-
-.education-icon {
-    font-size: 3rem;
-}
-
-.education-details h3 {
-    color: var(--yellow);
-    margin-bottom: 5px;
-}
-
-.education-institution {
-    color: var(--cyan);
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.education-period {
-    color: var(--text-dim);
-    font-size: 0.9rem;
+.content-panel h3 {
+    color: var(--accent);
+    margin-top: 20px;
     margin-bottom: 10px;
 }
 
-.education-description {
-    color: var(--text-dim);
+.content-panel p, .content-panel li {
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin-bottom: 10px;
 }
 
-/* Certifications */
-.certifications-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
+/* Specific Styles for Cards */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+
+.card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+.card:hover {
+    border-color: var(--primary);
+    transform: translateY(-5px);
+    background: rgba(0, 243, 255, 0.05);
 }
 
-.certification-badge {
-    background: rgba(0, 206, 201, 0.1);
-    border: 2px solid var(--cyan);
-    border-radius: 10px;
-    padding: 15px 20px;
-    text-align: center;
-    color: var(--cyan);
-    font-weight: 700;
-    transition: all 0.3s ease;
+.tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 4px;
+    background: rgba(188, 19, 254, 0.2);
+    color: var(--secondary);
+    border: 1px solid var(--secondary);
 }
 
-.certification-badge:hover {
-    background: rgba(0, 206, 201, 0.2);
-    transform: scale(1.05);
-    box-shadow: 0 5px 20px rgba(0, 206, 201, 0.3);
+.skill-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #333;
+    margin-top: 5px;
+    border-radius: 4px;
 }
-
-/* Contact Links */
-.contact-links {
-    display: grid;
-    gap: 20px;
-    margin-top: 30px;
-}
-
-.contact-link {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid var(--cyan);
-    border-radius: 15px;
-    padding: 20px;
-    text-decoration: none;
-    color: var(--text-light);
-    transition: all 0.3s ease;
-}
-
-.contact-link:hover {
-    background: rgba(0, 206, 201, 0.1);
-    transform: translateX(10px);
-    box-shadow: 0 10px 30px rgba(0, 206, 201, 0.3);
-    border-color: var(--yellow);
-}
-
-.contact-icon {
-    font-size: 2rem;
-}
-
-.contact-text {
-    font-size: 1.1rem;
-    font-weight: 700;
+.skill-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 4px;
+    box-shadow: 0 0 8px var(--primary);
 }
 
 /* Scrollbar */
-.panel::-webkit-scrollbar {
-    width: 10px;
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+/* Start Screen */
+#start-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 1s ease;
+}
+.start-btn {
+    margin-top: 30px;
+    padding: 15px 40px;
+    font-family: 'Russo One';
+    font-size: 1.5rem;
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 20px var(--primary);
+    transition: 0.3s;
+}
+.start-btn:hover {
+    background: var(--primary);
+    color: #000;
+    box-shadow: 0 0 40px var(--primary);
 }
 
-.panel::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
+/* Controls Hint */
+.controls-hint {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    animation: pulse 2s infinite;
+    pointer-events: none;
 }
 
-.panel::-webkit-scrollbar-thumb {
-    background: var(--cyan);
-    border-radius: 10px;
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
 }
 
-.panel::-webkit-scrollbar-thumb:hover {
-    background: var(--magenta);
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-    .panel-content {
-        padding: 25px;
-    }
-    
-    .panel-content h1 {
-        font-size: 2rem;
-    }
-    
-    .panel-content h2 {
-        font-size: 1.5rem;
-    }
-    
-    #zone-indicator {
-        top: 15px;
-        right: 15px;
-        padding: 10px 20px;
-    }
-    
-    #progress-container {
-        top: 15px;
-        left: 15px;
-        width: 200px;
-    }
-    
-    .projects-grid,
-    .certifications-list {
-        grid-template-columns: 1fr;
-    }
+    .grid-2 { grid-template-columns: 1fr; }
+    .hud-top-left, .hud-top-right { top: 15px; }
+    .hud-top-left { left: 15px; }
+    .hud-top-right { right: 15px; }
+    .zone-label { font-size: 1.5rem; }
+    .content-panel { padding: 20px; width: 95%; }
 }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loader-container">
-            <div class="loader-ring"></div>
-            <div class="loader-ring"></div>
-            <div class="loader-ring"></div>
-            <h2>Loading Experience...</h2>
-            <p class="loading-percentage">0%</p>
-        </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1 style="color:white; font-family:'Russo One'; font-size: 3rem; text-align:center;">SWABHIMAN SARANGI</h1>
+        <p style="color:#aaa; margin-top:10px;">DevOps Engineer & System Architect</p>
+        <button class="start-btn" id="start-btn">Initialize System</button>
     </div>
 
-    <!-- Canvas -->
-    <canvas id="webgl-canvas"></canvas>
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
 
-    <!-- Scroll Hint -->
-    <div id="scroll-hint" class="hidden">
-        <div class="scroll-icon">
-            <div class="scroll-wheel"></div>
-        </div>
-        <p>Scroll to explore</p>
-    </div>
-
-    <!-- Zone Indicator -->
-    <div id="zone-indicator">
-        <span id="zone-name">Welcome</span>
-    </div>
-
-    <!-- Progress Bar -->
-    <div id="progress-container">
-        <div class="progress-bar">
-            <div id="progress-fill"></div>
-        </div>
-        <div class="progress-dots">
-            <div class="dot active" data-zone="0"></div>
-            <div class="dot" data-zone="1"></div>
-            <div class="dot" data-zone="2"></div>
-            <div class="dot" data-zone="3"></div>
-            <div class="dot" data-zone="4"></div>
-            <div class="dot" data-zone="5"></div>
-            <div class="dot" data-zone="6"></div>
-        </div>
-    </div>
-
-    <!-- Content Panels -->
-    <div id="content-panels">
-        <!-- Intro Panel -->
-        <div class="panel intro-panel active" data-zone="0">
-            <div class="panel-content">
-                <h1 class="glitch-text" id="name-title">Loading...</h1>
-                <p class="subtitle" id="title-text"></p>
-                <div class="bio-container" id="bio-content"></div>
-                <div class="stats-grid" id="stats-grid"></div>
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+        
+        <!-- HUD Left: Progress -->
+        <div class="hud-top-left">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">JOURNEY PROGRESS</div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-bar"></div>
             </div>
         </div>
 
-        <!-- About Panel -->
-        <div class="panel about-panel" data-zone="1">
-            <div class="panel-content">
-                <h2>About Me</h2>
-                <div id="about-content"></div>
+        <!-- HUD Right: Zone Name -->
+        <div class="hud-top-right">
+            <div class="zone-label" id="zone-name">INITIALIZING...</div>
+            <div style="font-size: 0.8rem; color: var(--secondary);">CURRENT SECTOR</div>
+        </div>
+
+        <!-- Content Panels -->
+        <div id="panel-intro" class="content-panel active">
+            <div style="text-align: center;">
+                <h1 style="font-size: 3rem; color: white; margin-bottom: 10px;">HELLO WORLD</h1>
+                <p style="font-size: 1.2rem; color: var(--primary);">I am Swabhiman Sarangi</p>
+                <div style="margin: 30px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 20px 0;">
+                    DevOps Trainee | Systems Engineer | PeopleSoft Admin
+                </div>
+                <p>Transitioning from 4+ years of Enterprise System Administration to Cloud Native DevOps.</p>
+                <p>Specializing in AWS, Kubernetes, and Automation.</p>
+                
+                <div class="grid-3" style="margin-top: 30px;">
+                    <div class="card">
+                        <h3 style="margin:0; color:white;">4+</h3>
+                        <small>Years Exp.</small>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin:0; color:white;">CEH</h3>
+                        <small>Certified</small>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin:0; color:white;">M.Tech</h3>
+                        <small>CSE</small>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Experience Panel -->
-        <div class="panel experience-panel" data-zone="2">
-            <div class="panel-content">
-                <h2>Experience</h2>
-                <div id="experience-content" class="timeline"></div>
+        <div id="panel-about" class="content-panel">
+            <h2>About Me</h2>
+            <p>My journey began in Computer Science engineering, leading to a deep dive into enterprise systems. I spent over 4 years mastering PeopleSoft administration, ensuring high availability for critical business applications.</p>
+            <p>Currently, I am pivoting my focus towards <strong>DevOps and Cloud Infrastructure</strong>. I am passionate about building CI/CD pipelines, containerizing applications, and managing infrastructure as code.</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Location</h3>
+                    <p>Bhubaneswar, India</p>
+                </div>
+                <div class="card">
+                    <h3>Focus</h3>
+                    <p>Cloud Automation & Security</p>
+                </div>
             </div>
         </div>
 
-        <!-- Projects Panel -->
-        <div class="panel projects-panel" data-zone="3">
-            <div class="panel-content">
-                <h2>Projects</h2>
-                <div id="projects-content" class="projects-grid"></div>
+        <div id="panel-experience" class="content-panel">
+            <h2>Experience Log</h2>
+            
+            <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--primary);">
+                <h3>Senior System Engineer</h3>
+                <p style="color: var(--primary);">nSoln India | Oct 2022 - Oct 2024</p>
+                <ul>
+                    <li>Led PeopleTools upgrade (8.58 -> 8.60), boosting performance by 20%.</li>
+                    <li>Managed Integration Broker & Production Support for GL, AP, PO modules.</li>
+                    <li>Optimized Elasticsearch implementation improving search efficiency by 35%.</li>
+                </ul>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--secondary);">
+                <h3>Systems Trainee</h3>
+                <p style="color: var(--secondary);">nSoln India | Jun 2020 - Oct 2022</p>
+                <ul>
+                    <li>Administered SQL Server and PeopleSoft environments.</li>
+                    <li>Developed Python web scrapers for data collection.</li>
+                    <li>Performed automated website testing and alert management.</li>
+                </ul>
+            </div>
+
+            <div class="card" style="border-left: 4px solid var(--accent);">
+                <h3>Research Intern</h3>
+                <p style="color: var(--accent);">North Orissa University | Nov 2020 - May 2021</p>
+                <ul>
+                    <li>Built a Plagiarism Detection System for Odia documents using Fuzzy Neural Networks.</li>
+                    <li>Developed full-stack ASP.NET application for the project.</li>
+                </ul>
             </div>
         </div>
 
-        <!-- Skills Panel -->
-        <div class="panel skills-panel" data-zone="4">
-            <div class="panel-content">
-                <h2>Skills</h2>
-                <div id="skills-content" class="skills-categories"></div>
+        <div id="panel-projects" class="content-panel">
+            <h2>Project Database</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>🚀 PeopleSoft Upgrade</h3>
+                    <p>Major version migration with zero downtime strategy.</p>
+                    <div><span class="tag">Oracle</span><span class="tag">Performance</span></div>
+                </div>
+                <div class="card">
+                    <h3>🤖 AI Plagiarism Detector</h3>
+                    <p>NLP based detection for regional languages.</p>
+                    <div><span class="tag">Python</span><span class="tag">ML</span><span class="tag">ASP.NET</span></div>
+                </div>
+                <div class="card">
+                    <h3>☁️ DevOps Lab</h3>
+                    <p>Automated AWS infrastructure provisioning.</p>
+                    <div><span class="tag">Terraform</span><span class="tag">Ansible</span><span class="tag">Docker</span></div>
+                </div>
+                <div class="card">
+                    <h3>🕷️ Web Scrapers</h3>
+                    <p>Distributed crawling architecture.</p>
+                    <div><span class="tag">Python</span><span class="tag">Selenium</span></div>
+                </div>
             </div>
         </div>
 
-        <!-- Education Panel -->
-        <div class="panel education-panel" data-zone="5">
-            <div class="panel-content">
-                <h2>Education</h2>
-                <div id="education-content" class="education-list"></div>
-                <h3>Certifications</h3>
-                <div id="certifications-content" class="certifications-list"></div>
+        <div id="panel-skills" class="content-panel">
+            <h2>Skill Matrix</h2>
+            
+            <h3>DevOps & Cloud</h3>
+            <div class="grid-2">
+                <div>AWS <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 70%"></div></div></div>
+                <div>Docker/K8s <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 60%"></div></div></div>
+                <div>Jenkins <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 65%"></div></div></div>
+                <div>Terraform <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 50%"></div></div></div>
+            </div>
+
+            <h3>Core Engineering</h3>
+            <div class="grid-2">
+                <div>PeopleSoft Admin <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 90%"></div></div></div>
+                <div>SQL / Oracle DB <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 85%"></div></div></div>
+                <div>Python <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 80%"></div></div></div>
+                <div>Elasticsearch <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 75%"></div></div></div>
             </div>
         </div>
 
-        <!-- Contact Panel -->
-        <div class="panel contact-panel" data-zone="6">
-            <div class="panel-content">
-                <h2 id="contact-greeting">Let's Connect</h2>
-                <p id="contact-message"></p>
-                <div id="contact-links" class="contact-links"></div>
+        <div id="panel-contact" class="content-panel">
+            <h2>Establish Connection</h2>
+            <p>I am currently open to DevOps opportunities and collaborations.</p>
+            
+            <div class="grid-2" style="margin-top: 30px;">
+                <a href="mailto:swabhimanpersonal@gmail.com" class="card" style="text-decoration: none; text-align: center;">
+                    <h3 style="font-size: 2rem; margin: 0;">📧</h3>
+                    <p>Email Me</p>
+                </a>
+                <a href="https://www.linkedin.com/in/swabhimansarangi" target="_blank" class="card" style="text-decoration: none; text-align: center;">
+                    <h3 style="font-size: 2rem; margin: 0;">💼</h3>
+                    <p>LinkedIn</p>
+                </a>
             </div>
+            
+            <div style="margin-top: 30px; text-align: center; color: var(--text-muted);">
+                <p>+91 9583412252</p>
+                <p>Bhubaneswar, Odisha, India</p>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            SCROLL TO TRAVERSE • DRAG TO ROTATE
         </div>
     </div>
 
     <script type="module">
-import * as THREE from 'three';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// ========== CONFIG DATA ==========
-const CONFIG = {
-  "personal": {
-    "name": "Swabhiman Sarangi",
-    "title": "DevOps Trainee | Systems Engineer | PeopleSoft Admin",
-    "avatar": "👨‍💻",
-    "bio": [
-      "Former Systems Engineer (PeopleSoft Admin) now transitioning into DevOps.",
-      "Over 4 years of experience administering enterprise-level PeopleSoft applications.",
-      "Currently learning AWS, Docker, Jenkins, Kubernetes, Ansible, and Terraform.",
-      "Passionate about cloud infrastructure, automation, and building reliable deployment workflows."
-    ],
-    "stats": [
-      { "label": "Experience", "value": "4+ Years" },
-      { "label": "Location", "value": "Bhubaneswar, India" },
-      { "label": "Specialization", "value": "DevOps & Cloud" }
-    ]
-  },
-  "experience": [
-    {
-      "title": "Senior System Engineer",
-      "company": "nSoln India (PeopleSoft Techno-functional)",
-      "period": "Oct 2022 - Oct 2024",
-      "description": "Led PeopleSoft environment installations, upgrades, and optimizations. Upgraded PeopleTools from 8.58 to 8.60, improving processing speed by 20%. Configured Integration Broker, managed domains, and provided production support for GL, AP, PO, AR, BI, and AM applications."
-    },
-    {
-      "title": "Systems Trainee",
-      "company": "nSoln India",
-      "period": "Jun 2020 - Oct 2022",
-      "description": "Trained in SQL Server and PeopleSoft administration. Conducted PeopleSoft Procurement Testing, managed production alerts, developed graphical elements, performed web scraping, and executed website testing to ensure optimal functionality."
-    },
-    {
-      "title": "Project Intern",
-      "company": "North Orissa University",
-      "period": "Nov 2020 - May 2021",
-      "description": "Research Scholar Fellow on 'Plagiarism Detection Software for Odia documents using Fuzzy Neural Network' funded by DST, Odisha. Developed web crawlers in Python, implemented text classification, created Odia language dictionaries, and built a full-stack web application using ASP.NET."
-    }
-  ],
-  "projects": [
-    {
-      "name": "PeopleSoft Upgrade",
-      "description": "Led upgrade from PeopleTools 8.58.16 to 8.60.05 and PUM 35 to 47, achieving 20% performance improvement",
-      "emoji": "🚀",
-      "tags": ["PeopleSoft", "Oracle", "Performance"],
-      "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-    },
-    {
-      "name": "Integration Broker Setup",
-      "description": "Configured service operations for legacy app integration, reducing errors by 20%",
-      "emoji": "🔗",
-      "tags": ["Integration", "APIs", "Automation"],
-      "gradient": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
-    },
-    {
-      "name": "Elasticsearch Implementation",
-      "description": "Set up global search infrastructure, increasing search efficiency by 35%",
-      "emoji": "🔍",
-      "tags": ["Elasticsearch", "Search", "Optimization"],
-      "gradient": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
-    },
-    {
-      "name": "Plagiarism Detection System",
-      "description": "Built AI-powered system for Odia documents using Fuzzy Neural Networks with web crawler and ASP.NET frontend",
-      "emoji": "🤖",
-      "tags": ["Python", "Machine Learning", "ASP.NET"],
-      "gradient": "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
-    },
-    {
-      "name": "DevOps Learning Projects",
-      "description": "Building hands-on projects with AWS, Docker, Jenkins, Kubernetes, Ansible, and Terraform",
-      "emoji": "☁️",
-      "tags": ["AWS", "Docker", "Kubernetes", "CI/CD"],
-      "gradient": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
-    },
-    {
-      "name": "Web Scraping Tools",
-      "description": "Developed Python-based web crawlers and scrapers for content development and data collection",
-      "emoji": "🕷️",
-      "tags": ["Python", "Web Scraping", "Automation"],
-      "gradient": "linear-gradient(135deg, #30cfd0 0%, #330867 100%)"
-    }
-  ],
-  "skills": [
-    {
-      "category": "DevOps & Cloud",
-      "items": [
-        { "name": "AWS", "level": 70 },
-        { "name": "Docker", "level": 65 },
-        { "name": "Jenkins", "level": 60 },
-        { "name": "Kubernetes", "level": 55 },
-        { "name": "Ansible", "level": 50 },
-        { "name": "Terraform", "level": 50 }
-      ]
-    },
-    {
-      "category": "PeopleSoft & Oracle",
-      "items": [
-        { "name": "PeopleSoft Admin", "level": 90 },
-        { "name": "PeopleTools", "level": 85 },
-        { "name": "Integration Broker", "level": 80 },
-        { "name": "Oracle Patches", "level": 85 }
-      ]
-    },
-    {
-      "category": "Programming",
-      "items": [
-        { "name": "Python", "level": 80 },
-        { "name": "Java", "level": 75 },
-        { "name": "SQL", "level": 85 },
-        { "name": "HTML/CSS", "level": 70 }
-      ]
-    },
-    {
-      "category": "Database & Search",
-      "items": [
-        { "name": "Microsoft SQL Server", "level": 85 },
-        { "name": "Elasticsearch", "level": 75 },
-        { "name": "Lucene", "level": 70 }
-      ]
-    },
-    {
-      "category": "Security & Testing",
-      "items": [
-        { "name": "Ethical Hacking (CEH)", "level": 75 },
-        { "name": "Software Testing", "level": 80 },
-        { "name": "Website Testing", "level": 75 }
-      ]
-    }
-  ],
-  "education": [
-    {
-      "degree": "Master of Technology (M.Tech)",
-      "institution": "Utkal University",
-      "period": "2018 - 2020",
-      "description": "Computer Science & Engineering",
-      "icon": "🎓"
-    },
-    {
-      "degree": "Bachelor of Technology (B.Tech)",
-      "institution": "Purushottam Institute of Engineering & Technology, BPUT",
-      "period": "2011 - 2014",
-      "description": "Computer Science & Engineering",
-      "icon": "🎓"
-    },
-    {
-      "degree": "Diploma",
-      "institution": "Rourkela Institute of Technology",
-      "period": "2008 - 2011",
-      "description": "Computer Science and Engineering",
-      "icon": "📜"
-    }
-  ],
-  "certifications": [
-    "Certified Ethical Hacker (CEH) V9",
-    "Software Testing",
-    "Developing ASP.NET Web Applications",
-    "Network Technology & Devices",
-    "Core Java"
-  ],
-  "contact": {
-    "greeting": "Let's Connect!",
-    "message": "I'm actively seeking DevOps opportunities and open to collaborations. Feel free to reach out!",
-    "links": [
-      { "icon": "📧", "text": "swabhimanpersonal@gmail.com", "url": "mailto:swabhimanpersonal@gmail.com" },
-      { "icon": "📱", "text": "+91 9583412252", "url": "tel:+919583412252" },
-      { "icon": "💼", "text": "LinkedIn Profile", "url": "https://www.linkedin.com/in/swabhimansarangi" },
-      { "icon": "📍", "text": "Bhubaneswar, Odisha, India", "url": "#" }
-    ]
-  }
-};
+        // --- CONFIGURATION ---
+        const PATH_LENGTH = 400;
+        const ZONES = [
+            { id: 'intro', start: 0, end: 40, name: 'Home Base' },
+            { id: 'about', start: 40, end: 90, name: 'Bio Data' },
+            { id: 'experience', start: 90, end: 160, name: 'Career Path' },
+            { id: 'projects', start: 160, end: 230, name: 'Project Lab' },
+            { id: 'skills', start: 230, end: 290, name: 'Skill Tree' },
+            { id: 'contact', start: 290, end: 350, name: 'Comms Link' }
+        ];
 
-// ========== GLOBAL STATE ==========
-let scene, camera, renderer, composer;
-let character, ground;
-let scrollPosition = 0;
-let targetScrollPosition = 0;
-let currentZone = 0;
-let isIntroComplete = false;
-let isDragging = false;
-let previousMousePosition = { x: 0, y: 0 };
-let cameraRotation = { x: 0, y: 0 };
-
-const PATH_LENGTH = 300;
-const ZONE_BOUNDARIES = [0, -25, -65, -115, -175, -225, -265, -300];
-const ZONE_NAMES = ['Intro', 'About', 'Experience', 'Projects', 'Skills', 'Education', 'Contact'];
-
-// ========== PATH FUNCTION ==========
-function getPathX(z) {
-    return Math.sin(z * 0.05) * 12 + Math.sin(z * 0.02) * 5;
-}
-
-// ========== ANIME MATERIAL SYSTEM ==========
-function createAnimeMaterial(color, options = {}) {
-    const gradientMap = new THREE.DataTexture(
-        new Uint8Array([0, 128, 255]),
-        3, 1, THREE.RedFormat
-    );
-    gradientMap.needsUpdate = true;
-
-    return new THREE.MeshToonMaterial({
-        color: color,
-        gradientMap: gradientMap,
-        emissive: options.emissive || 0x000000,
-        emissiveIntensity: options.emissiveIntensity || 0,
-        ...options
-    });
-}
-
-function addOutline(mesh, thickness = 0.02) {
-    const outlineMaterial = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        side: THREE.BackSide
-    });
-
-    const outlineMesh = mesh.clone();
-    outlineMesh.material = outlineMaterial;
-    outlineMesh.scale.multiplyScalar(1 + thickness);
-    mesh.add(outlineMesh);
-}
-
-// ========== CHARACTER CREATION ==========
-function createCharacter() {
-    const characterGroup = new THREE.Group();
-    const scale = 1.5;
-
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.5 * scale, 16, 16);
-    const headMat = createAnimeMaterial(0xffdcb6);
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.8 * scale;
-    addOutline(head, 0.02);
-    characterGroup.add(head);
-
-    // Body (Coral suit)
-    const bodyGeo = new THREE.CylinderGeometry(0.4 * scale, 0.5 * scale, 1.2 * scale, 8);
-    const bodyMat = createAnimeMaterial(0xff7675);
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1 * scale;
-    addOutline(body, 0.02);
-    characterGroup.add(body);
-
-    // Arms
-    const armGeo = new THREE.CylinderGeometry(0.15 * scale, 0.15 * scale, 1 * scale, 8);
-    const armMat = createAnimeMaterial(0xff7675);
-    
-    const leftArm = new THREE.Mesh(armGeo, armMat);
-    leftArm.position.set(-0.6 * scale, 1 * scale, 0);
-    leftArm.rotation.z = 0.3;
-    addOutline(leftArm, 0.02);
-    characterGroup.add(leftArm);
-
-    const rightArm = new THREE.Mesh(armGeo, armMat);
-    rightArm.position.set(0.6 * scale, 1 * scale, 0);
-    rightArm.rotation.z = -0.3;
-    addOutline(rightArm, 0.02);
-    characterGroup.add(rightArm);
-
-    // Legs (Dark pants)
-    const legGeo = new THREE.CylinderGeometry(0.2 * scale, 0.18 * scale, 1 * scale, 8);
-    const legMat = createAnimeMaterial(0x2d3436);
-    
-    const leftLeg = new THREE.Mesh(legGeo, legMat);
-    leftLeg.position.set(-0.25 * scale, 0.1 * scale, 0);
-    addOutline(leftLeg, 0.02);
-    characterGroup.add(leftLeg);
-
-    const rightLeg = new THREE.Mesh(legGeo, legMat);
-    rightLeg.position.set(0.25 * scale, 0.1 * scale, 0);
-    addOutline(rightLeg, 0.02);
-    characterGroup.add(rightLeg);
-
-    // Backpack (Yellow)
-    const backpackGeo = new THREE.BoxGeometry(0.6 * scale, 0.7 * scale, 0.4 * scale);
-    const backpackMat = createAnimeMaterial(0xfdcb6e);
-    const backpack = new THREE.Mesh(backpackGeo, backpackMat);
-    backpack.position.set(0, 1.2 * scale, -0.4 * scale);
-    addOutline(backpack, 0.02);
-    characterGroup.add(backpack);
-
-    characterGroup.userData = {
-        walkPhase: 0,
-        leftArm: leftArm,
-        rightArm: rightArm,
-        leftLeg: leftLeg,
-        rightLeg: rightLeg
-    };
-
-    return characterGroup;
-}
-
-function animateCharacter(character, delta) {
-    const userData = character.userData;
-    userData.walkPhase += delta * 5;
-
-    const swing = Math.sin(userData.walkPhase) * 0.3;
-    userData.leftArm.rotation.x = swing;
-    userData.rightArm.rotation.x = -swing;
-    userData.leftLeg.rotation.x = -swing;
-    userData.rightLeg.rotation.x = swing;
-
-    character.position.y = Math.abs(Math.sin(userData.walkPhase)) * 0.2;
-}
-
-// ========== ENVIRONMENT CREATION ==========
-function createGround() {
-    const groundGroup = new THREE.Group();
-    const segments = 100;
-    const width = 40;
-
-    for (let i = 0; i < segments; i++) {
-        const z = -i * (PATH_LENGTH / segments);
-        const nextZ = -(i + 1) * (PATH_LENGTH / segments);
+        // --- STATE ---
+        let scene, camera, renderer, composer;
+        let player, mixer;
+        let scrollPos = 0;
+        let targetScrollPos = 0;
+        let currentZoneIdx = -1;
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+        let camAngle = { x: 0, y: Math.PI }; // Start looking forward
+        let starField;
         
-        const x = getPathX(z);
-        const nextX = getPathX(nextZ);
-
-        const planeGeo = new THREE.PlaneGeometry(width, PATH_LENGTH / segments);
-        const planeMat = createAnimeMaterial(0x27ae60, { roughness: 0.8 });
-        const plane = new THREE.Mesh(planeGeo, planeMat);
-        
-        plane.rotation.x = -Math.PI / 2;
-        plane.position.set((x + nextX) / 2, 0, (z + nextZ) / 2);
-        
-        const angle = Math.atan2(nextX - x, nextZ - z);
-        plane.rotation.z = angle;
-        
-        addOutline(plane, 0.03);
-        groundGroup.add(plane);
-    }
-
-    return groundGroup;
-}
-
-// ========== ZONE 1: INTRO ==========
-function createIntroZone() {
-    const group = new THREE.Group();
-    const centerZ = (ZONE_BOUNDARIES[0] + ZONE_BOUNDARIES[1]) / 2;
-    const x = getPathX(centerZ);
-
-    const platformGeo = new THREE.CylinderGeometry(8, 8, 0.5, 32);
-    const platformMat = createAnimeMaterial(0x3498db);
-    const platform = new THREE.Mesh(platformGeo, platformMat);
-    platform.position.set(x, -0.25, centerZ);
-    addOutline(platform, 0.03);
-    group.add(platform);
-
-    const ringGeo = new THREE.TorusGeometry(6, 0.3, 16, 32);
-    const ringMat = createAnimeMaterial(0x00cec9, { 
-        emissive: 0x00cec9, 
-        emissiveIntensity: 0.5 
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(x, 3, centerZ);
-    ring.rotation.x = Math.PI / 2;
-    addOutline(ring, 0.02);
-    ring.userData = { animPhase: 0 };
-    group.add(ring);
-
-    group.userData = { ring: ring };
-    return group;
-}
-
-function animateIntroZone(zone, delta) {
-    const ring = zone.userData.ring;
-    ring.userData.animPhase += delta * 2;
-    ring.position.y = 3 + Math.sin(ring.userData.animPhase) * 0.5;
-    ring.rotation.z += delta * 0.5;
-}
-
-// ========== ZONE 2: ABOUT ==========
-function createAboutZone() {
-    const group = new THREE.Group();
-    const startZ = ZONE_BOUNDARIES[1];
-    const endZ = ZONE_BOUNDARIES[2];
-
-    for (let i = 0; i < 12; i++) {
-        const z = startZ + (endZ - startZ) * (i / 11);
-        const x = getPathX(z) + (Math.random() - 0.5) * 15;
-        
-        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 8);
-        const trunkMat = createAnimeMaterial(0x8b4513);
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.set(x, 1.5, z);
-        addOutline(trunk, 0.02);
-        group.add(trunk);
-
-        const topGeo = new THREE.SphereGeometry(1.5, 8, 8);
-        const topMat = createAnimeMaterial(0x2ecc71);
-        const top = new THREE.Mesh(topGeo, topMat);
-        top.position.set(x, 4, z);
-        addOutline(top, 0.02);
-        group.add(top);
-    }
-
-    const orbs = [];
-    for (let i = 0; i < 25; i++) {
-        const z = startZ + Math.random() * (endZ - startZ);
-        const x = getPathX(z) + (Math.random() - 0.5) * 18;
-        const y = 0.5 + Math.random() * 4;
-
-        const orbGeo = new THREE.SphereGeometry(0.3, 16, 16);
-        const orbMat = createAnimeMaterial(0x2ecc71, {
-            emissive: 0x2ecc71,
-            emissiveIntensity: 0.3
-        });
-        const orb = new THREE.Mesh(orbGeo, orbMat);
-        orb.position.set(x, y, z);
-        orb.userData = { 
-            baseY: y, 
-            phase: Math.random() * Math.PI * 2 
-        };
-        addOutline(orb, 0.02);
-        orbs.push(orb);
-        group.add(orb);
-    }
-
-    group.userData = { orbs: orbs };
-    return group;
-}
-
-function animateAboutZone(zone, delta) {
-    zone.userData.orbs.forEach(orb => {
-        orb.userData.phase += delta * 2;
-        orb.position.y = orb.userData.baseY + Math.sin(orb.userData.phase) * 0.3;
-    });
-}
-
-// ========== ZONE 3: EXPERIENCE ==========
-function createExperienceZone() {
-    const group = new THREE.Group();
-    const startZ = ZONE_BOUNDARIES[2];
-    const endZ = ZONE_BOUNDARIES[3];
-
-    for (let i = 0; i < 20; i++) {
-        const z = startZ + Math.random() * (endZ - startZ);
-        const pathX = getPathX(z);
-        const offset = (Math.random() - 0.5) * 2;
-        const distance = 8 + Math.random() * 7;
-        const x = pathX + (offset > 0 ? distance : -distance);
-
-        const height = (2 + Math.random() * 6) * 1.5;
-        const width = (1 + Math.random() * 1.5) * 1.5;
-
-        const buildingGeo = new THREE.BoxGeometry(width, height, width);
-        const buildingMat = createAnimeMaterial(0x7f8c8d);
-        const building = new THREE.Mesh(buildingGeo, buildingMat);
-        building.position.set(x, height / 2, z);
-        addOutline(building, 0.03);
-        group.add(building);
-
-        const windowsGeo = new THREE.PlaneGeometry(width * 0.8, height * 0.8);
-        const windowsMat = createAnimeMaterial(0xf39c12, {
-            emissive: 0xf39c12,
-            emissiveIntensity: 0.4
-        });
-        const windows = new THREE.Mesh(windowsGeo, windowsMat);
-        windows.position.set(x, height / 2, z + width / 2 + 0.01);
-        group.add(windows);
-    }
-
-    return group;
-}
-
-// ========== ZONE 4: PROJECTS ==========
-function createProjectsZone() {
-    const group = new THREE.Group();
-    const startZ = ZONE_BOUNDARIES[3];
-    const endZ = ZONE_BOUNDARIES[4];
-    const centerZ = (startZ + endZ) / 2;
-    const x = getPathX(centerZ);
-
-    const floorGeo = new THREE.PlaneGeometry(30, Math.abs(endZ - startZ));
-    const floorMat = createAnimeMaterial(0x00cec9, {
-        emissive: 0x00cec9,
-        emissiveIntensity: 0.6,
-        transparent: true,
-        opacity: 0.3
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(x, 0.1, centerZ);
-    group.add(floor);
-
-    const pillars = [];
-    for (let i = 0; i < 6; i++) {
-        const z = startZ + (endZ - startZ) * ((i + 0.5) / 6);
-        const pillarX = getPathX(z) + (i % 2 === 0 ? -6 : 6);
-
-        const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 8, 6);
-        const pillarMat = createAnimeMaterial(0x00cec9, {
-            emissive: 0x00cec9,
-            emissiveIntensity: 0.3
-        });
-        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-        pillar.position.set(pillarX, 4, z);
-        addOutline(pillar, 0.02);
-        pillar.userData = { phase: i * Math.PI / 3 };
-        pillars.push(pillar);
-        group.add(pillar);
-    }
-
-    group.userData = { pillars: pillars, floor: floor };
-    return group;
-}
-
-function animateProjectsZone(zone, delta) {
-    zone.userData.pillars.forEach(pillar => {
-        pillar.userData.phase += delta;
-        pillar.position.y = 4 + Math.sin(pillar.userData.phase) * 0.5;
-    });
-}
-
-// ========== ZONE 5: SKILLS ==========
-function createSkillsZone() {
-    const group = new THREE.Group();
-    const centerZ = (ZONE_BOUNDARIES[4] + ZONE_BOUNDARIES[5]) / 2;
-    const x = getPathX(centerZ);
-
-    const coreGeo = new THREE.OctahedronGeometry(3, 0);
-    const coreMat = new THREE.MeshBasicMaterial({
-        color: 0xfd79a8,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.8
-    });
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    core.position.set(x, 5, centerZ);
-    group.add(core);
-
-    const orbs = [];
-    for (let i = 0; i < 10; i++) {
-        const orbGeo = new THREE.SphereGeometry(0.4, 16, 16);
-        const orbMat = createAnimeMaterial(0xfd79a8, {
-            emissive: 0xfd79a8,
-            emissiveIntensity: 0.5
-        });
-        const orb = new THREE.Mesh(orbGeo, orbMat);
-        addOutline(orb, 0.02);
-        orb.userData = {
-            angle: (i / 10) * Math.PI * 2,
-            radius: 5,
-            speed: 0.5 + Math.random() * 0.5
-        };
-        orbs.push(orb);
-        group.add(orb);
-    }
-
-    group.userData = { core: core, orbs: orbs, centerX: x, centerZ: centerZ };
-    return group;
-}
-
-function animateSkillsZone(zone, delta) {
-    const { core, orbs, centerX, centerZ } = zone.userData;
-    
-    core.rotation.x += delta * 0.5;
-    core.rotation.y += delta * 0.3;
-
-    orbs.forEach(orb => {
-        orb.userData.angle += delta * orb.userData.speed;
-        orb.position.x = centerX + Math.cos(orb.userData.angle) * orb.userData.radius;
-        orb.position.y = 5 + Math.sin(orb.userData.angle * 2) * 2;
-        orb.position.z = centerZ + Math.sin(orb.userData.angle) * orb.userData.radius;
-    });
-}
-
-// ========== ZONE 6: EDUCATION ==========
-function createEducationZone() {
-    const group = new THREE.Group();
-    const centerZ = (ZONE_BOUNDARIES[5] + ZONE_BOUNDARIES[6]) / 2;
-    const x = getPathX(centerZ);
-
-    const monumentGeo = new THREE.CylinderGeometry(2, 3, 8, 8);
-    const monumentMat = createAnimeMaterial(0xf1c40f, {
-        emissive: 0xf1c40f,
-        emissiveIntensity: 0.3
-    });
-    const monument = new THREE.Mesh(monumentGeo, monumentMat);
-    monument.position.set(x, 4, centerZ);
-    addOutline(monument, 0.03);
-    group.add(monument);
-
-    const columnPositions = [
-        { x: x - 4, z: centerZ - 4 },
-        { x: x + 4, z: centerZ - 4 },
-        { x: x - 4, z: centerZ + 4 },
-        { x: x + 4, z: centerZ + 4 }
-    ];
-
-    columnPositions.forEach(pos => {
-        const columnGeo = new THREE.CylinderGeometry(0.5, 0.6, 6, 8);
-        const columnMat = createAnimeMaterial(0xf1c40f);
-        const column = new THREE.Mesh(columnGeo, columnMat);
-        column.position.set(pos.x, 3, pos.z);
-        addOutline(column, 0.02);
-        group.add(column);
-    });
-
-    return group;
-}
-
-// ========== ZONE 7: CONTACT ==========
-function createContactZone() {
-    const group = new THREE.Group();
-    const centerZ = (ZONE_BOUNDARIES[6] + ZONE_BOUNDARIES[7]) / 2;
-    const x = getPathX(centerZ);
-
-    const portalGeo = new THREE.TorusGeometry(4, 0.5, 16, 32);
-    const portalMat = createAnimeMaterial(0x3498db, {
-        emissive: 0x3498db,
-        emissiveIntensity: 0.7
-    });
-    const portal = new THREE.Mesh(portalGeo, portalMat);
-    portal.position.set(x, 4, centerZ);
-    addOutline(portal, 0.02);
-    group.add(portal);
-
-    const particles = [];
-    for (let i = 0; i < 50; i++) {
-        const particleGeo = new THREE.SphereGeometry(0.1, 8, 8);
-        const particleMat = createAnimeMaterial(0x3498db, {
-            emissive: 0x3498db,
-            emissiveIntensity: 0.8
-        });
-        const particle = new THREE.Mesh(particleGeo, particleMat);
-        particle.userData = {
-            angle: Math.random() * Math.PI * 2,
-            radius: Math.random() * 3,
-            speed: 0.5 + Math.random() * 1,
-            yOffset: Math.random() * 6
-        };
-        particles.push(particle);
-        group.add(particle);
-    }
-
-    group.userData = { portal: portal, particles: particles, centerX: x, centerZ: centerZ };
-    return group;
-}
-
-function animateContactZone(zone, delta) {
-    const { portal, particles, centerX, centerZ } = zone.userData;
-    
-    portal.rotation.y += delta;
-
-    particles.forEach(particle => {
-        particle.userData.angle += delta * particle.userData.speed;
-        particle.position.x = centerX + Math.cos(particle.userData.angle) * particle.userData.radius;
-        particle.position.y = 1 + particle.userData.yOffset;
-        particle.position.z = centerZ + Math.sin(particle.userData.angle) * particle.userData.radius;
-    });
-}
-
-// ========== PARTICLES SYSTEM ==========
-function createParticles() {
-    const particlesGroup = new THREE.Group();
-
-    const dustGeo = new THREE.BufferGeometry();
-    const dustPositions = new Float32Array(1000 * 3);
-    for (let i = 0; i < 1000; i++) {
-        dustPositions[i * 3] = (Math.random() - 0.5) * 100;
-        dustPositions[i * 3 + 1] = Math.random() * 20;
-        dustPositions[i * 3 + 2] = Math.random() * -PATH_LENGTH;
-    }
-    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
-    const dustMat = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.1,
-        transparent: true,
-        opacity: 0.6
-    });
-    const dust = new THREE.Points(dustGeo, dustMat);
-    particlesGroup.add(dust);
-
-    const streamerGeo = new THREE.BufferGeometry();
-    const streamerPositions = new Float32Array(600 * 3);
-    const streamerVelocities = [];
-    for (let i = 0; i < 600; i++) {
-        streamerPositions[i * 3] = (Math.random() - 0.5) * 80;
-        streamerPositions[i * 3 + 1] = Math.random() * 30;
-        streamerPositions[i * 3 + 2] = Math.random() * -PATH_LENGTH;
-        streamerVelocities.push(0.5 + Math.random() * 1);
-    }
-    streamerGeo.setAttribute('position', new THREE.BufferAttribute(streamerPositions, 3));
-    const streamerMat = new THREE.PointsMaterial({
-        color: 0x00cec9,
-        size: 0.3,
-        transparent: true,
-        opacity: 0.8
-    });
-    const streamers = new THREE.Points(streamerGeo, streamerMat);
-    streamers.userData = { velocities: streamerVelocities };
-    particlesGroup.add(streamers);
-
-    const starsGeo = new THREE.BufferGeometry();
-    const starsPositions = new Float32Array(2000 * 3);
-    for (let i = 0; i < 2000; i++) {
-        starsPositions[i * 3] = (Math.random() - 0.5) * 200;
-        starsPositions[i * 3 + 1] = 20 + Math.random() * 80;
-        starsPositions[i * 3 + 2] = Math.random() * -PATH_LENGTH;
-    }
-    starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
-    const starsMat = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.2,
-        transparent: true,
-        opacity: 0.9
-    });
-    const stars = new THREE.Points(starsGeo, starsMat);
-    particlesGroup.add(stars);
-
-    return particlesGroup;
-}
-
-function animateParticles(particlesGroup, delta) {
-    const streamers = particlesGroup.children[1];
-    const positions = streamers.geometry.attributes.position.array;
-    const velocities = streamers.userData.velocities;
-
-    for (let i = 0; i < positions.length / 3; i++) {
-        positions[i * 3 + 1] -= velocities[i] * delta * 10;
-        if (positions[i * 3 + 1] < 0) {
-            positions[i * 3 + 1] = 30;
+        // --- HELPERS ---
+        // Generate a winding path
+        function getPathPosition(t) {
+            const x = Math.sin(t * 0.03) * 30 + Math.sin(t * 0.01) * 10;
+            const z = -t;
+            const y = 0;
+            return new THREE.Vector3(x, y, z);
         }
-    }
-    streamers.geometry.attributes.position.needsUpdate = true;
-}
 
-// ========== SCENE SETUP ==========
-function initScene() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f0c29);
-    scene.fog = new THREE.FogExp2(0x1a1a2e, 0.008);
-
-    camera = new THREE.PerspectiveCamera(
-        60,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-    );
-
-    const canvas = document.getElementById('webgl-canvas');
-    renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        antialias: true
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(10, 20, 10);
-    scene.add(directionalLight);
-
-    composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
-
-    const bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.2,
-        0.5,
-        0.2
-    );
-    composer.addPass(bloomPass);
-
-    ground = createGround();
-    scene.add(ground);
-
-    character = createCharacter();
-    character.position.set(getPathX(50), 50, 50);
-    character.userData.descending = true;
-    character.userData.spinPhase = 0;
-    scene.add(character);
-
-    scene.add(createIntroZone());
-    scene.add(createAboutZone());
-    scene.add(createExperienceZone());
-    scene.add(createProjectsZone());
-    scene.add(createSkillsZone());
-    scene.add(createEducationZone());
-    scene.add(createContactZone());
-    scene.add(createParticles());
-
-    window.addEventListener('resize', onWindowResize);
-
-    canvas.addEventListener('mousedown', onMouseDown);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseup', onMouseUp);
-    canvas.addEventListener('touchstart', onTouchStart);
-    canvas.addEventListener('touchmove', onTouchMove);
-    canvas.addEventListener('touchend', onTouchEnd);
-
-    window.addEventListener('wheel', onScroll, { passive: false });
-}
-
-// ========== INPUT HANDLERS ==========
-function onScroll(event) {
-    if (!isIntroComplete) {
-        event.preventDefault();
-        return;
-    }
-    
-    const scrollSpeed = 0.3;
-    targetScrollPosition += event.deltaY * scrollSpeed;
-    targetScrollPosition = Math.max(0, Math.min(PATH_LENGTH, targetScrollPosition));
-}
-
-function onMouseDown(event) {
-    isDragging = true;
-    previousMousePosition = { x: event.clientX, y: event.clientY };
-}
-
-function onMouseMove(event) {
-    if (!isDragging) return;
-
-    const deltaX = event.clientX - previousMousePosition.x;
-    const deltaY = event.clientY - previousMousePosition.y;
-
-    cameraRotation.y += deltaX * 0.005;
-    cameraRotation.x += deltaY * 0.005;
-    cameraRotation.x = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraRotation.x));
-
-    previousMousePosition = { x: event.clientX, y: event.clientY };
-}
-
-function onMouseUp() {
-    isDragging = false;
-}
-
-function onTouchStart(event) {
-    if (event.touches.length === 1) {
-        isDragging = true;
-        previousMousePosition = { 
-            x: event.touches[0].clientX, 
-            y: event.touches[0].clientY 
-        };
-    }
-}
-
-function onTouchMove(event) {
-    if (!isDragging || event.touches.length !== 1) return;
-
-    const deltaX = event.touches[0].clientX - previousMousePosition.x;
-    const deltaY = event.touches[0].clientY - previousMousePosition.y;
-
-    cameraRotation.y += deltaX * 0.005;
-    cameraRotation.x += deltaY * 0.005;
-    cameraRotation.x = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cameraRotation.x));
-
-    previousMousePosition = { 
-        x: event.touches[0].clientX, 
-        y: event.touches[0].clientY 
-    };
-}
-
-function onTouchEnd() {
-    isDragging = false;
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-}
-
-// ========== UPDATE FUNCTIONS ==========
-function updateCharacter(delta) {
-    if (character.userData.descending) {
-        character.userData.spinPhase += delta * 3;
-        character.position.y -= delta * 20;
-        character.rotation.y += delta * 5;
-
-        if (character.position.y <= 0) {
-            character.position.y = 0;
-            character.userData.descending = false;
-            character.rotation.y = 0;
-            completeIntro();
+        function getPathRotation(t) {
+            const p1 = getPathPosition(t);
+            const p2 = getPathPosition(t + 1);
+            return Math.atan2(p2.x - p1.x, p2.z - p1.z);
         }
-        return;
-    }
 
-    const smoothing = 0.05;
-    scrollPosition += (targetScrollPosition - scrollPosition) * smoothing;
+        function createToonMaterial(color, emissive = 0x000000) {
+            // Create a gradient map for toon shading
+            const canvas = document.createElement('canvas');
+            canvas.width = 4; canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 4, 0);
+            gradient.addColorStop(0, '#444');
+            gradient.addColorStop(0.5, '#888');
+            gradient.addColorStop(1, '#fff');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,4,1);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
 
-    const charZ = -scrollPosition;
-    const pathX = getPathX(charZ);
-    
-    character.position.x = pathX;
-    character.position.z = charZ;
-
-    const lookAhead = 2;
-    const nextZ = charZ - lookAhead;
-    const nextX = getPathX(nextZ);
-    character.rotation.y = Math.PI + Math.atan2(nextX - pathX, -lookAhead);
-
-    animateCharacter(character, delta);
-}
-
-function updateCamera() {
-    const distance = 15;
-    const height = 6;
-
-    const charPos = character.position;
-    const baseX = charPos.x - Math.sin(character.rotation.y) * distance;
-    const baseZ = charPos.z - Math.cos(character.rotation.y) * distance;
-    const baseY = charPos.y + height;
-
-    const rotatedX = baseX + Math.sin(cameraRotation.y) * distance * 0.5;
-    const rotatedZ = baseZ + Math.cos(cameraRotation.y) * distance * 0.5;
-    const rotatedY = baseY + cameraRotation.x * 5;
-
-    const smoothing = 0.05;
-    camera.position.x += (rotatedX - camera.position.x) * smoothing;
-    camera.position.y += (rotatedY - camera.position.y) * smoothing;
-    camera.position.z += (rotatedZ - camera.position.z) * smoothing;
-
-    camera.lookAt(charPos.x, charPos.y + 2, charPos.z);
-}
-
-function updateZone() {
-    const charZ = character.position.z;
-    let newZone = 0;
-
-    for (let i = 0; i < ZONE_BOUNDARIES.length - 1; i++) {
-        if (charZ <= ZONE_BOUNDARIES[i] && charZ > ZONE_BOUNDARIES[i + 1]) {
-            newZone = i;
-            break;
+            return new THREE.MeshToonMaterial({
+                color: color,
+                gradientMap: tex,
+                emissive: emissive,
+                emissiveIntensity: 0.5
+            });
         }
-    }
 
-    if (newZone !== currentZone) {
-        currentZone = newZone;
-        updateUI();
-    }
+        // --- INITIALIZATION ---
+        function init() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            scene.fog = new THREE.FogExp2(0x050510, 0.015);
 
-    const progress = (scrollPosition / PATH_LENGTH) * 100;
-    document.getElementById('progress-fill').style.width = progress + '%';
-}
-
-function updateUI() {
-    document.getElementById('zone-name').textContent = ZONE_NAMES[currentZone];
-
-    document.querySelectorAll('.panel').forEach(panel => {
-        panel.classList.remove('active');
-    });
-    const activePanel = document.querySelector(`.panel[data-zone="${currentZone}"]`);
-    if (activePanel) {
-        activePanel.classList.add('active');
-    }
-
-    document.querySelectorAll('.dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentZone);
-    });
-}
-
-// ========== ANIMATION LOOP ==========
-const clock = new THREE.Clock();
-
-function animate() {
-    requestAnimationFrame(animate);
-
-    const delta = clock.getDelta();
-
-    updateCharacter(delta);
-    updateCamera();
-    
-    // Only update zone if intro is complete
-    if (isIntroComplete) {
-        updateZone();
-    }
-
-    scene.children.forEach(child => {
-        if (child.userData.ring) animateIntroZone(child, delta);
-        if (child.userData.orbs && child.userData.orbs.length > 10) animateAboutZone(child, delta);
-        if (child.userData.pillars) animateProjectsZone(child, delta);
-        if (child.userData.core) animateSkillsZone(child, delta);
-        if (child.userData.portal) animateContactZone(child, delta);
-    });
-
-    const particlesGroup = scene.children.find(child => child.children.length === 3 && child.children[0].type === 'Points');
-    if (particlesGroup) {
-        animateParticles(particlesGroup, delta);
-    }
-
-    composer.render();
-}
-
-// ========== UI POPULATION ==========
-function populateUI() {
-    document.getElementById('name-title').textContent = CONFIG.personal.name;
-    document.getElementById('title-text').textContent = CONFIG.personal.title;
-
-    const bioContent = document.getElementById('bio-content');
-    CONFIG.personal.bio.forEach(text => {
-        const p = document.createElement('p');
-        p.textContent = text;
-        bioContent.appendChild(p);
-    });
-
-    const statsGrid = document.getElementById('stats-grid');
-    CONFIG.personal.stats.forEach(stat => {
-        const card = document.createElement('div');
-        card.className = 'stat-card';
-        card.innerHTML = `
-            <div class="stat-label">${stat.label}</div>
-            <div class="stat-value">${stat.value}</div>
-        `;
-        statsGrid.appendChild(card);
-    });
-
-    const aboutContent = document.getElementById('about-content');
-    CONFIG.personal.bio.forEach(text => {
-        const p = document.createElement('p');
-        p.textContent = text;
-        p.style.marginBottom = '15px';
-        p.style.lineHeight = '1.8';
-        p.style.color = 'var(--text-dim)';
-        aboutContent.appendChild(p);
-    });
-
-    const experienceContent = document.getElementById('experience-content');
-    CONFIG.experience.forEach(exp => {
-        const item = document.createElement('div');
-        item.className = 'timeline-item';
-        item.innerHTML = `
-            <h3>${exp.title}</h3>
-            <div class="timeline-company">${exp.company}</div>
-            <div class="timeline-period">${exp.period}</div>
-            <div class="timeline-description">${exp.description}</div>
-        `;
-        experienceContent.appendChild(item);
-    });
-
-    const projectsContent = document.getElementById('projects-content');
-    CONFIG.projects.forEach(project => {
-        const card = document.createElement('div');
-        card.className = 'project-card';
-        card.style.background = project.gradient || 'rgba(255, 255, 255, 0.05)';
-        
-        const tags = project.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
-        
-        card.innerHTML = `
-            <span class="project-emoji">${project.emoji}</span>
-            <h3>${project.name}</h3>
-            <p class="project-description">${project.description}</p>
-            <div class="project-tags">${tags}</div>
-        `;
-        projectsContent.appendChild(card);
-    });
-
-    const skillsContent = document.getElementById('skills-content');
-    CONFIG.skills.forEach(category => {
-        const categoryDiv = document.createElement('div');
-        categoryDiv.className = 'skill-category';
-
-        let skillsHTML = `<h3>${category.category}</h3>`;
-        category.items.forEach(skill => {
-            skillsHTML += `
-                <div class="skill-item">
-                    <div class="skill-name">
-                        <span>${skill.name}</span>
-                        <span>${skill.level}%</span>
-                    </div>
-                    <div class="skill-bar">
-                        <div class="skill-fill" style="width: ${skill.level}%"></div>
-                    </div>
-                </div>
-            `;
-        });
-
-        categoryDiv.innerHTML = skillsHTML;
-        skillsContent.appendChild(categoryDiv);
-    });
-
-    const educationContent = document.getElementById('education-content');
-    CONFIG.education.forEach(edu => {
-        const item = document.createElement('div');
-        item.className = 'education-item';
-        item.innerHTML = `
-            <div class="education-icon">${edu.icon}</div>
-            <div class="education-details">
-                <h3>${edu.degree}</h3>
-                <div class="education-institution">${edu.institution}</div>
-                <div class="education-period">${edu.period}</div>
-                <div class="education-description">${edu.description}</div>
-            </div>
-        `;
-        educationContent.appendChild(item);
-    });
-
-    const certificationsContent = document.getElementById('certifications-content');
-    CONFIG.certifications.forEach(cert => {
-        const badge = document.createElement('div');
-        badge.className = 'certification-badge';
-        badge.textContent = cert;
-        certificationsContent.appendChild(badge);
-    });
-
-    document.getElementById('contact-greeting').textContent = CONFIG.contact.greeting;
-    document.getElementById('contact-message').textContent = CONFIG.contact.message;
-
-    const contactLinks = document.getElementById('contact-links');
-    CONFIG.contact.links.forEach(link => {
-        const linkEl = document.createElement('a');
-        linkEl.className = 'contact-link';
-        linkEl.href = link.url;
-        linkEl.target = '_blank';
-        linkEl.innerHTML = `
-            <span class="contact-icon">${link.icon}</span>
-            <span class="contact-text">${link.text}</span>
-        `;
-        contactLinks.appendChild(linkEl);
-    });
-}
-
-function completeIntro() {
-    isIntroComplete = true;
-    document.getElementById('scroll-hint').classList.remove('hidden');
-}
-
-function simulateLoading() {
-    const loadingScreen = document.getElementById('loading-screen');
-    const percentageEl = document.querySelector('.loading-percentage');
-    let progress = 0;
-
-    const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(interval);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            setTimeout(() => {
-                loadingScreen.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 1000);
-            }, 500);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Post Processing (Bloom)
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.2;
+            bloomPass.strength = 1.2; // Glow intensity
+            bloomPass.radius = 0.5;
+            
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // World Generation
+            createStarfield();
+            createPathVisuals();
+            createPlayer();
+            
+            // Zones
+            createIntroZone(20);
+            createAboutZone(65);
+            createExperienceZone(125);
+            createProjectsZone(195);
+            createSkillsZone(260);
+            createContactZone(320);
+
+            // Event Listeners
+            window.addEventListener('resize', onResize);
+            document.addEventListener('wheel', onScroll);
+            document.addEventListener('mousedown', onMouseDown);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('touchstart', onTouchStart, {passive: false});
+            document.addEventListener('touchmove', onTouchMove, {passive: false});
+            document.addEventListener('touchend', onMouseUp);
+
+            // Start Loop
+            animate();
         }
-        percentageEl.textContent = Math.floor(progress) + '%';
-    }, 150);
-}
 
-// ========== INITIALIZATION ==========
-function init() {
-    populateUI();
-    initScene();
-    simulateLoading();
-    animate();
-}
+        // --- OBJECT CREATION ---
 
-init();
+        function createStarfield() {
+            const geometry = new THREE.BufferGeometry();
+            const count = 2000;
+            const positions = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) {
+                positions[i] = (Math.random() - 0.5) * 400;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({size: 0.5, color: 0xffffff, transparent: true, opacity: 0.8});
+            starField = new THREE.Points(geometry, material);
+            scene.add(starField);
+        }
+
+        function createPathVisuals() {
+            // Create a glowing floor strip
+            const points = [];
+            for(let i=0; i<=PATH_LENGTH; i+=2) {
+                points.push(getPathPosition(i));
+            }
+            const curve = new THREE.CatmullRomCurve3(points);
+            const tubeGeo = new THREE.TubeGeometry(curve, 100, 4, 8, false); // Wide flat tube
+            const tubeMat = new THREE.MeshBasicMaterial({ 
+                color: 0x001133, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+            mesh.scale.y = 0.1; // Flatten it
+            scene.add(mesh);
+        }
+
+        function createPlayer() {
+            player = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+            const bodyMat = createToonMaterial(0x00f3ff, 0x0044aa);
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1;
+            body.castShadow = true;
+            player.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const headMat = createToonMaterial(0xffffff, 0x222222);
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.8;
+            player.add(head);
+
+            // Floating Ring
+            const ringGeo = new THREE.TorusGeometry(0.7, 0.05, 8, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xbc13fe });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI/2;
+            ring.position.y = 0.5;
+            player.userData.ring = ring;
+            player.add(ring);
+
+            // Light
+            const pl = new THREE.PointLight(0x00f3ff, 1, 15);
+            pl.position.y = 2;
+            player.add(pl);
+
+            scene.add(player);
+        }
+
+        // --- ZONE BUILDERS ---
+
+        function createIntroZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+            
+            // Giant floating logo/text representation
+            const geo = new THREE.IcosahedronGeometry(4, 1);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 5;
+            group.add(mesh);
+            
+            // Particles
+            const pGeo = new THREE.BufferGeometry();
+            const pCount = 100;
+            const pPos = new Float32Array(pCount*3);
+            for(let i=0; i<pCount*3; i++) pPos[i] = (Math.random()-0.5)*15;
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.1});
+            const pts = new THREE.Points(pGeo, pMat);
+            pts.position.y = 5;
+            group.add(pts);
+
+            group.userData = { type: 'intro', mesh: mesh, pts: pts };
+            scene.add(group);
+        }
+
+        function createAboutZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+
+            // Trees/Data structures
+            for(let i=0; i<10; i++) {
+                const h = Math.random() * 5 + 2;
+                const geo = new THREE.BoxGeometry(0.5, h, 0.5);
+                const mat = createToonMaterial(0x00ff88);
+                const tree = new THREE.Mesh(geo, mat);
+                tree.position.set((Math.random()-0.5)*30, h/2, (Math.random()-0.5)*30);
+                group.add(tree);
+            }
+            scene.add(group);
+        }
+
+        function createExperienceZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+
+            // Skyscrapers representing career growth
+            const heights = [5, 8, 12];
+            heights.forEach((h, i) => {
+                const geo = new THREE.BoxGeometry(4, h, 4);
+                const mat = createToonMaterial(0xff0055, 0x440011);
+                const build = new THREE.Mesh(geo, mat);
+                build.position.set(i===0?-8 : i===1?8 : 0, h/2, i===2?0 : (Math.random()>0.5?5:-5));
+                
+                // Windows
+                const winGeo = new THREE.PlaneGeometry(3, h-1);
+                const winMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const win = new THREE.Mesh(winGeo, winMat);
+                win.position.z = 2.01;
+                win.position.y = 0;
+                build.add(win);
+                
+                group.add(build);
+            });
+            scene.add(group);
+        }
+
+        function createProjectsZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+
+            // Floating Crystals
+            for(let i=0; i<5; i++) {
+                const geo = new THREE.OctahedronGeometry(1.5);
+                const mat = createToonMaterial(Math.random() * 0xffffff, Math.random() * 0xffffff);
+                const cry = new THREE.Mesh(geo, mat);
+                cry.position.set((Math.random()-0.5)*20, 3, (Math.random()-0.5)*20);
+                cry.userData = { speed: Math.random()*0.02, offset: Math.random()*Math.PI };
+                group.add(cry);
+            }
+            group.userData = { type: 'projects' };
+            scene.add(group);
+        }
+
+        function createSkillsZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+
+            // Orbiting spheres
+            const centerGeo = new THREE.SphereGeometry(2);
+            const centerMat = new THREE.MeshBasicMaterial({ color: 0xbc13fe, wireframe: true });
+            const center = new THREE.Mesh(centerGeo, centerMat);
+            center.position.y = 4;
+            group.add(center);
+
+            const satellites = [];
+            for(let i=0; i<8; i++) {
+                const sat = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                sat.userData = { angle: (i/8)*Math.PI*2, radius: 4, speed: 0.02 };
+                satellites.push(sat);
+                group.add(sat);
+            }
+            group.userData = { type: 'skills', sats: satellites, center: center };
+            scene.add(group);
+        }
+
+        function createContactZone(zPos) {
+            const group = new THREE.Group();
+            const pos = getPathPosition(zPos);
+            group.position.copy(pos);
+
+            // Portal
+            const geo = new THREE.TorusGeometry(5, 0.5, 16, 100);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+            const portal = new THREE.Mesh(geo, mat);
+            portal.position.y = 5;
+            group.add(portal);
+            
+            // Inner glow
+            const glow = new THREE.PointLight(0x00f3ff, 2, 20);
+            glow.position.y = 5;
+            group.add(glow);
+
+            group.userData = { type: 'contact', portal: portal };
+            scene.add(group);
+        }
+
+        // --- LOGIC ---
+
+        function updatePlayer(dt) {
+            // Smooth Scroll
+            scrollPos += (targetScrollPos - scrollPos) * 0.05;
+            
+            // Bounds
+            if(scrollPos < 0) scrollPos = 0;
+            if(scrollPos > PATH_LENGTH) scrollPos = PATH_LENGTH;
+
+            // Move Player
+            const pos = getPathPosition(scrollPos);
+            player.position.lerp(pos, 0.1);
+            
+            // Face direction
+            const rot = getPathRotation(scrollPos);
+            player.rotation.y = rot + Math.PI; // Face forward along path
+
+            // Animate Ring
+            player.userData.ring.rotation.z += dt;
+            player.userData.ring.rotation.x = (Math.PI/2) + Math.sin(scrollPos * 0.1) * 0.2;
+
+            // Camera Follow
+            const camDist = window.innerWidth < 768 ? 12 : 8;
+            const camHeight = window.innerWidth < 768 ? 6 : 4;
+            
+            // Calculate ideal camera position based on orbit angles
+            const cx = player.position.x + Math.sin(camAngle.y) * camDist;
+            const cz = player.position.z + Math.cos(camAngle.y) * camDist;
+            const cy = player.position.y + camHeight + (camAngle.x * 5);
+
+            camera.position.lerp(new THREE.Vector3(cx, cy, cz), 0.1);
+            camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
+
+            // Update Starfield to loop around camera
+            starField.position.x = camera.position.x;
+            starField.position.z = camera.position.z;
+
+            updateUI();
+        }
+
+        function updateEnvironment(time) {
+            scene.children.forEach(child => {
+                if(!child.userData.type) return;
+
+                if(child.userData.type === 'intro') {
+                    child.userData.mesh.rotation.y += 0.005;
+                    child.userData.mesh.rotation.x += 0.002;
+                    child.userData.pts.rotation.y -= 0.01;
+                }
+                else if(child.userData.type === 'projects') {
+                    child.children.forEach(c => {
+                        if(c.geometry.type === 'OctahedronGeometry') {
+                            c.rotation.y += c.userData.speed;
+                            c.rotation.x += c.userData.speed;
+                            c.position.y = 3 + Math.sin(time * 2 + c.userData.offset);
+                        }
+                    });
+                }
+                else if(child.userData.type === 'skills') {
+                    child.userData.center.rotation.y += 0.01;
+                    child.userData.center.rotation.x += 0.01;
+                    child.userData.sats.forEach(sat => {
+                        sat.userData.angle += sat.userData.speed;
+                        sat.position.x = Math.cos(sat.userData.angle) * sat.userData.radius;
+                        sat.position.z = Math.sin(sat.userData.angle) * sat.userData.radius;
+                        sat.position.y = 4 + Math.sin(sat.userData.angle * 2);
+                    });
+                }
+                else if(child.userData.type === 'contact') {
+                    child.userData.portal.rotation.z -= 0.02;
+                }
+            });
+        }
+
+        function updateUI() {
+            // Progress Bar
+            const pct = (scrollPos / PATH_LENGTH) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+
+            // Zone Detection
+            let activeZoneIdx = 0;
+            ZONES.forEach((z, idx) => {
+                if(scrollPos >= z.start && scrollPos < z.end) activeZoneIdx = idx;
+            });
+
+            if(activeZoneIdx !== currentZoneIdx) {
+                currentZoneIdx = activeZoneIdx;
+                const zone = ZONES[currentZoneIdx];
+                
+                // Update Text
+                document.getElementById('zone-name').innerText = zone.name;
+
+                // Switch Panels
+                document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+                const nextPanel = document.getElementById(`panel-${zone.id}`);
+                if(nextPanel) nextPanel.classList.add('active');
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = 0.016; // approx 60fps
+            const time = performance.now() * 0.001;
+
+            updatePlayer(dt);
+            updateEnvironment(time);
+
+            composer.render();
+        }
+
+        // --- INPUT HANDLING ---
+
+        function onScroll(e) {
+            targetScrollPos += e.deltaY * 0.05;
+        }
+
+        function onMouseDown(e) {
+            isDragging = true;
+            prevMouse.x = e.clientX;
+            prevMouse.y = e.clientY;
+        }
+
+        function onMouseMove(e) {
+            if(!isDragging) return;
+            const dx = e.clientX - prevMouse.x;
+            const dy = e.clientY - prevMouse.y;
+            
+            camAngle.y -= dx * 0.005;
+            camAngle.x += dy * 0.005;
+            // Clamp vertical look
+            camAngle.x = Math.max(-1, Math.min(1, camAngle.x));
+
+            prevMouse.x = e.clientX;
+            prevMouse.y = e.clientY;
+        }
+
+        function onMouseUp() { isDragging = false; }
+
+        function onTouchStart(e) {
+            if(e.touches.length === 1) {
+                isDragging = true;
+                prevMouse.x = e.touches[0].clientX;
+                prevMouse.y = e.touches[0].clientY;
+            }
+        }
+
+        function onTouchMove(e) {
+            if(!isDragging || e.touches.length !== 1) return;
+            e.preventDefault(); // Stop page scroll
+            const dx = e.touches[0].clientX - prevMouse.x;
+            const dy = e.touches[0].clientY - prevMouse.y;
+            
+            camAngle.y -= dx * 0.005;
+            camAngle.x += dy * 0.005;
+            camAngle.x = Math.max(-1, Math.min(1, camAngle.x));
+
+            prevMouse.x = e.touches[0].clientX;
+            prevMouse.y = e.touches[0].clientY;
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- STARTUP ---
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-screen').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('start-screen').style.display = 'none';
+            }, 1000);
+            init();
+        });
+
     </script>
 </body>
 </html>
