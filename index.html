@@ -1,949 +1,1222 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swabhiman Sarangi - Interactive 3D Portfolio</title>
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+    <title>Swabhiman Sarangi | DevOps & Cloud Engineer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#06b6d4',
+                        secondary: '#10b981',
+                        accent: '#8b5cf6',
+                        neon: '#00ff88',
+                        dark: '#0a0e1a',
+                        darker: '#050810',
+                        card: '#0f1420'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
         }
-    }
     </script>
     <style>
-@import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Space+Mono:wght@400;700&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-:root {
-    --bg-dark: #050510;
-    --primary: #00f3ff; /* Cyan */
-    --secondary: #bc13fe; /* Purple */
-    --accent: #ffd700; /* Gold */
-    --text-main: #ffffff;
-    --text-muted: #a0a0b0;
-    --glass: rgba(10, 10, 25, 0.85);
-    --glass-border: rgba(0, 243, 255, 0.3);
-}
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #050810;
+            overflow-x: hidden;
+            cursor: none;
+        }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Custom Cursor */
+        .cursor {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #06b6d4;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: all 0.1s ease;
+            transform: translate(-50%, -50%);
+        }
 
-body {
-    font-family: 'Space Mono', monospace;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
-    overflow: hidden; /* Prevent native scroll, we use custom wheel */
-    height: 100vh;
-    width: 100vw;
-}
+        .cursor-dot {
+            width: 6px;
+            height: 6px;
+            background: #06b6d4;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
 
-#canvas-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
+        .cursor.hover {
+            width: 50px;
+            height: 50px;
+            background: rgba(6, 182, 212, 0.1);
+            border-color: #00ff88;
+        }
 
-/* --- UI LAYER --- */
-#ui-layer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
-    pointer-events: none; /* Let clicks pass through to canvas where needed */
-}
+        /* Loading Screen */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #050810;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
 
-/* HUD Elements */
-.hud-top-left {
-    position: absolute;
-    top: 30px;
-    left: 30px;
-    pointer-events: auto;
-}
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
 
-.hud-top-right {
-    position: absolute;
-    top: 30px;
-    right: 30px;
-    text-align: right;
-    pointer-events: auto;
-}
+        .loader-spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(6, 182, 212, 0.1);
+            border-top-color: #06b6d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-.zone-label {
-    font-family: 'Russo One', sans-serif;
-    font-size: 2rem;
-    color: var(--primary);
-    text-transform: uppercase;
-    text-shadow: 0 0 15px var(--primary);
-    letter-spacing: 2px;
-    margin-bottom: 5px;
-}
+        .loader-text {
+            margin-top: 20px;
+            color: #06b6d4;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
 
-.progress-track {
-    width: 200px;
-    height: 6px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-left: auto;
-}
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    width: 0%;
-    transition: width 0.1s linear;
-    box-shadow: 0 0 10px var(--primary);
-}
+        /* Canvas Background */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
 
-/* Content Panels */
-.content-panel {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 800px;
-    max-width: 90%;
-    max-height: 75vh;
-    overflow-y: auto;
-    background: var(--glass);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
-    padding: 40px;
-    border-radius: 4px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    box-shadow: 0 0 50px rgba(0,0,0,0.5);
-    display: none; /* Hide completely when not active */
-}
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #06b6d4 0%, #10b981 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: gradientShift 5s ease infinite;
+        }
 
-.content-panel.active {
-    opacity: 1;
-    pointer-events: auto;
-    display: block;
-    transform: translate(-50%, -50%) scale(1);
-}
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
 
-.content-panel h2 {
-    font-family: 'Russo One', sans-serif;
-    color: var(--primary);
-    font-size: 2.5rem;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--secondary);
-    padding-bottom: 10px;
-    text-transform: uppercase;
-}
+        /* Typewriter Effect */
+        .typewriter {
+            overflow: hidden;
+            border-right: 3px solid #06b6d4;
+            white-space: nowrap;
+            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
 
-.content-panel h3 {
-    color: var(--accent);
-    margin-top: 20px;
-    margin-bottom: 10px;
-}
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
 
-.content-panel p, .content-panel li {
-    line-height: 1.6;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-}
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #06b6d4 }
+        }
 
-/* Specific Styles for Cards */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        /* 3D Card Effect */
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-.card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 15px;
-    border-radius: 8px;
-    transition: 0.3s;
-}
-.card:hover {
-    border-color: var(--primary);
-    transform: translateY(-5px);
-    background: rgba(0, 243, 255, 0.05);
-}
+        .card-3d:hover {
+            transform: translateZ(20px) rotateX(5deg) rotateY(5deg);
+        }
 
-.tag {
-    display: inline-block;
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    margin: 2px;
-    border-radius: 4px;
-    background: rgba(188, 19, 254, 0.2);
-    color: var(--secondary);
-    border: 1px solid var(--secondary);
-}
+        /* Glowing Border */
+        .glow-border {
+            position: relative;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.05), rgba(16, 185, 129, 0.05));
+        }
 
-.skill-bar-bg {
-    width: 100%;
-    height: 8px;
-    background: #333;
-    margin-top: 5px;
-    border-radius: 4px;
-}
-.skill-bar-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 4px;
-    box-shadow: 0 0 8px var(--primary);
-}
+        .glow-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 2px;
+            background: linear-gradient(135deg, #06b6d4, #10b981, #8b5cf6);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderGlow 3s ease-in-out infinite;
+        }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
-::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        @keyframes borderGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
 
-/* Start Screen */
-#start-screen {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #000;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    transition: opacity 1s ease;
-}
-.start-btn {
-    margin-top: 30px;
-    padding: 15px 40px;
-    font-family: 'Russo One';
-    font-size: 1.5rem;
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    cursor: pointer;
-    text-transform: uppercase;
-    box-shadow: 0 0 20px var(--primary);
-    transition: 0.3s;
-}
-.start-btn:hover {
-    background: var(--primary);
-    color: #000;
-    box-shadow: 0 0 40px var(--primary);
-}
+        /* Floating Animation */
+        .float {
+            animation: float 6s ease-in-out infinite;
+        }
 
-/* Controls Hint */
-.controls-hint {
-    position: absolute;
-    bottom: 30px;
-    width: 100%;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    animation: pulse 2s infinite;
-    pointer-events: none;
-}
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
 
-@keyframes pulse {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
+        /* Pulse Glow */
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
 
-@media (max-width: 768px) {
-    .grid-2 { grid-template-columns: 1fr; }
-    .hud-top-left, .hud-top-right { top: 15px; }
-    .hud-top-left { left: 15px; }
-    .hud-top-right { right: 15px; }
-    .zone-label { font-size: 1.5rem; }
-    .content-panel { padding: 20px; width: 95%; }
-}
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(6, 182, 212, 0.8), 0 0 60px rgba(6, 182, 212, 0.4); }
+        }
+
+        /* Skill Orbit */
+        .orbit-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+
+        .orbit {
+            position: absolute;
+            border: 1px dashed rgba(6, 182, 212, 0.2);
+            border-radius: 50%;
+            animation: orbit 20s linear infinite;
+        }
+
+        .orbit-1 {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .orbit-2 {
+            width: 70%;
+            height: 70%;
+            top: 15%;
+            left: 15%;
+            animation-duration: 15s;
+            animation-direction: reverse;
+        }
+
+        .orbit-3 {
+            width: 40%;
+            height: 40%;
+            top: 30%;
+            left: 30%;
+            animation-duration: 10s;
+        }
+
+        @keyframes orbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .orbit-item {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(15, 20, 32, 0.9);
+            border: 2px solid rgba(6, 182, 212, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+
+        .orbit-item:hover {
+            transform: scale(1.3);
+            border-color: #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        /* Counter Animation */
+        .counter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #06b6d4, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Timeline Enhanced */
+        .timeline-item {
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #06b6d4, #10b981);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.8);
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% + 20px);
+            background: linear-gradient(180deg, #06b6d4, #10b981);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        /* Project Card Hover */
+        .project-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.1), transparent);
+            transition: left 0.7s;
+        }
+
+        .project-card:hover::before {
+            left: 100%;
+        }
+
+        .project-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(6, 182, 212, 0.3);
+        }
+
+        /* Scroll Progress Bar */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #06b6d4, #10b981, #8b5cf6);
+            z-index: 9999;
+            transition: width 0.1s;
+        }
+
+        /* Neon Button */
+        .neon-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .neon-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(0, 255, 136, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .neon-btn:hover::before {
+            width: 500px;
+            height: 500px;
+        }
+
+        .neon-btn:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Skill Bar Animation */
+        .skill-bar {
+            height: 8px;
+            background: rgba(6, 182, 212, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .skill-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #06b6d4, #10b981);
+            border-radius: 10px;
+            width: 0;
+            transition: width 1.5s ease-out;
+            position: relative;
+        }
+
+        .skill-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Fade In Animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Stagger Animation */
+        .stagger-1 { transition-delay: 0.1s; }
+        .stagger-2 { transition-delay: 0.2s; }
+        .stagger-3 { transition-delay: 0.3s; }
+        .stagger-4 { transition-delay: 0.4s; }
+        .stagger-5 { transition-delay: 0.5s; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050810;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #06b6d4, #10b981);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #10b981, #8b5cf6);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-progress {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .status-expired {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.4);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            transform: translateX(0);
+        }
     </style>
 </head>
-<body>
+<body class="bg-darker text-slate-300 antialiased">
 
-    <!-- Start Screen -->
-    <div id="start-screen">
-        <h1 style="color:white; font-family:'Russo One'; font-size: 3rem; text-align:center;">SWABHIMAN SARANGI</h1>
-        <p style="color:#aaa; margin-top:10px;">DevOps Engineer & System Architect</p>
-        <button class="start-btn" id="start-btn">Click Here</button>
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+    <div class="cursor-dot"></div>
+
+    <!-- Loading Screen -->
+    <div class="loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">INITIALIZING SYSTEM...</div>
     </div>
 
-    <!-- 3D Canvas -->
-    <div id="canvas-container"></div>
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress" id="scrollProgress"></div>
 
-    <!-- UI Overlay -->
-    <div id="ui-layer">
-        
-        <!-- HUD Left: Progress -->
-        <div class="hud-top-left">
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">JOURNEY PROGRESS</div>
-            <div class="progress-track">
-                <div class="progress-fill" id="progress-bar"></div>
-            </div>
-        </div>
+    <!-- Particles Canvas -->
+    <canvas id="particles-canvas"></canvas>
 
-        <!-- HUD Right: Zone Name -->
-        <div class="hud-top-right">
-            <div class="zone-label" id="zone-name">INITIALIZING...</div>
-            <div style="font-size: 0.8rem; color: var(--secondary);">CURRENT SECTOR</div>
-        </div>
-
-        <!-- Content Panels -->
-        <div id="panel-intro" class="content-panel active">
-            <div style="text-align: center;">
-                <h1 style="font-size: 3rem; color: white; margin-bottom: 10px;">HELLO WORLD</h1>
-                <p style="font-size: 1.2rem; color: var(--primary);">I am Swabhiman Sarangi</p>
-                <div style="margin: 30px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 20px 0;">
-                    DevOps Trainee | Systems Engineer | PeopleSoft Admin
-                </div>
-                <p>Transitioning from 4+ years of Enterprise System Administration to Cloud Native DevOps.</p>
-                <p>Specializing in AWS, Kubernetes, and Automation.</p>
-                
-                <div class="grid-3" style="margin-top: 30px;">
-                    <div class="card">
-                        <h3 style="margin:0; color:white;">4+</h3>
-                        <small>Years Exp.</small>
-                    </div>
-                    <div class="card">
-                        <h3 style="margin:0; color:white;">CEH</h3>
-                        <small>Certified</small>
-                    </div>
-                    <div class="card">
-                        <h3 style="margin:0; color:white;">M.Tech</h3>
-                        <small>CSE</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="panel-about" class="content-panel">
-            <h2>About Me</h2>
-            <p>My journey began in Computer Science engineering, leading to a deep dive into enterprise systems. I spent over 4 years mastering PeopleSoft administration, ensuring high availability for critical business applications.</p>
-            <p>Currently, I am pivoting my focus towards <strong>DevOps and Cloud Infrastructure</strong>. I am passionate about building CI/CD pipelines, containerizing applications, and managing infrastructure as code.</p>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>Location</h3>
-                    <p>Bhubaneswar, India</p>
-                </div>
-                <div class="card">
-                    <h3>Focus</h3>
-                    <p>Cloud Automation & Security</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="panel-experience" class="content-panel">
-            <h2>Experience Log</h2>
-            
-            <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--primary);">
-                <h3>Senior System Engineer</h3>
-                <p style="color: var(--primary);">nSoln India | Oct 2022 - Oct 2024</p>
-                <ul>
-                    <li>Led PeopleTools upgrade (8.58 -> 8.60), boosting performance by 20%.</li>
-                    <li>Managed Integration Broker & Production Support for GL, AP, PO modules.</li>
-                    <li>Optimized Elasticsearch implementation improving search efficiency by 35%.</li>
-                </ul>
-            </div>
-
-            <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--secondary);">
-                <h3>Systems Trainee</h3>
-                <p style="color: var(--secondary);">nSoln India | Jun 2020 - Oct 2022</p>
-                <ul>
-                    <li>Administered SQL Server and PeopleSoft environments.</li>
-                    <li>Developed Python web scrapers for data collection.</li>
-                    <li>Performed automated website testing and alert management.</li>
-                </ul>
-            </div>
-
-            <div class="card" style="border-left: 4px solid var(--accent);">
-                <h3>Research Intern</h3>
-                <p style="color: var(--accent);">North Orissa University | Nov 2020 - May 2021</p>
-                <ul>
-                    <li>Built a Plagiarism Detection System for Odia documents using Fuzzy Neural Networks.</li>
-                    <li>Developed full-stack ASP.NET application for the project.</li>
-                </ul>
-            </div>
-        </div>
-
-        <div id="panel-projects" class="content-panel">
-            <h2>Project Database</h2>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>🚀 PeopleSoft Upgrade</h3>
-                    <p>Major version migration with zero downtime strategy.</p>
-                    <div><span class="tag">Oracle</span><span class="tag">Performance</span></div>
-                </div>
-                <div class="card">
-                    <h3>🤖 AI Plagiarism Detector</h3>
-                    <p>NLP based detection for regional languages.</p>
-                    <div><span class="tag">Python</span><span class="tag">ML</span><span class="tag">ASP.NET</span></div>
-                </div>
-                <div class="card">
-                    <h3>☁️ DevOps Lab</h3>
-                    <p>Automated AWS infrastructure provisioning.</p>
-                    <div><span class="tag">Terraform</span><span class="tag">Ansible</span><span class="tag">Docker</span></div>
-                </div>
-                <div class="card">
-                    <h3>🕷️ Web Scrapers</h3>
-                    <p>Distributed crawling architecture.</p>
-                    <div><span class="tag">Python</span><span class="tag">Selenium</span></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="panel-skills" class="content-panel">
-            <h2>Skill Matrix</h2>
-            
-            <h3>DevOps & Cloud</h3>
-            <div class="grid-2">
-                <div>AWS <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 70%"></div></div></div>
-                <div>Docker/K8s <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 60%"></div></div></div>
-                <div>Jenkins <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 65%"></div></div></div>
-                <div>Terraform <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 50%"></div></div></div>
-            </div>
-
-            <h3>Core Engineering</h3>
-            <div class="grid-2">
-                <div>PeopleSoft Admin <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 90%"></div></div></div>
-                <div>SQL / Oracle DB <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 85%"></div></div></div>
-                <div>Python <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 80%"></div></div></div>
-                <div>Elasticsearch <div class="skill-bar-bg"><div class="skill-bar-fill" style="width: 75%"></div></div></div>
-            </div>
-        </div>
-
-        <div id="panel-contact" class="content-panel">
-            <h2>Establish Connection</h2>
-            <p>I am currently open to DevOps opportunities and collaborations.</p>
-            
-            <div class="grid-2" style="margin-top: 30px;">
-                <a href="mailto:swabhimanpersonal@gmail.com" class="card" style="text-decoration: none; text-align: center;">
-                    <h3 style="font-size: 2rem; margin: 0;">📧</h3>
-                    <p>Email Me</p>
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-darker/95 backdrop-blur-xl border-b border-slate-800/50 shadow-2xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <a href="#" class="text-2xl font-black text-white group">
+                    <span class="gradient-text">Swabhiman</span><span class="text-primary group-hover:scale-110 transition-transform inline-block">.</span>
                 </a>
-                <a href="https://www.linkedin.com/in/swabhimansarangi" target="_blank" class="card" style="text-decoration: none; text-align: center;">
-                    <h3 style="font-size: 2rem; margin: 0;">💼</h3>
-                    <p>LinkedIn</p>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#about" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        About
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#skills" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        Skills
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#experience" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        Experience
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#projects" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        Projects
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#education" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        Education
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#contact" class="text-slate-300 hover:text-primary transition font-medium relative group">
+                        Contact
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all group-hover:w-full"></span>
+                    </a>
+                </div>
+                <a href="#contact" class="hidden md:inline-block neon-btn bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white px-8 py-3 rounded-xl font-bold transition shadow-2xl shadow-primary/30">
+                    Hire Me
                 </a>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center; color: var(--text-muted);">
-                <p>+91 9583412252</p>
-                <p>Bhubaneswar, Odisha, India</p>
+                <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </div>
+    </nav>
 
-        <div class="controls-hint">
-            SCROLL TO TRAVERSE • DRAG TO ROTATE
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 right-0 w-64 h-full bg-darker/95 backdrop-blur-xl z-50 md:hidden">
+        <div class="p-6">
+            <button id="closeMobileMenu" class="text-white text-2xl mb-8">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="flex flex-col space-y-6">
+                <a href="#about" class="text-slate-300 hover:text-primary transition font-medium">About</a>
+                <a href="#skills" class="text-slate-300 hover:text-primary transition font-medium">Skills</a>
+                <a href="#experience" class="text-slate-300 hover:text-primary transition font-medium">Experience</a>
+                <a href="#projects" class="text-slate-300 hover:text-primary transition font-medium">Projects</a>
+                <a href="#education" class="text-slate-300 hover:text-primary transition font-medium">Education</a>
+                <a href="#contact" class="text-slate-300 hover:text-primary transition font-medium">Contact</a>
+            </div>
         </div>
     </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    <!-- Hero Section -->
+    <section id="home" class="min-h-screen flex items-center pt-20 pb-20 px-4 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center relative z-10">
+            <div class="fade-in">
+                <p class="text-primary font-bold mb-4 tracking-widest text-sm uppercase">Hello, I'm</p>
+                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-tight">
+                    Swabhiman<br><span class="gradient-text">Sarangi</span>
+                </h1>
+                <h2 class="text-2xl md:text-3xl text-slate-400 mb-8 font-light">
+                    Systems Engineer <span class="text-secondary">|</span> 
+                    <span class="gradient-text font-bold">DevOps & Cloud</span>
+                </h2>
+                <p class="text-slate-400 mb-10 max-w-xl leading-relaxed text-lg">
+                    Aspiring DevOps Engineer with 4 years of IT experience. I specialize in designing scalable, automated, and secure cloud-based systems using AWS, Terraform, Docker, and Kubernetes.
+                </p>
+                <div class="flex flex-wrap gap-5 mb-10">
+                    <a href="#projects" class="neon-btn bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white px-10 py-5 rounded-xl font-bold transition shadow-2xl shadow-primary/40 flex items-center gap-3 text-lg">
+                        <i class="fas fa-rocket"></i> View Projects
+                    </a>
+                    <a href="Swabhiman_Sarangi_resume_2026.pdf" download class="neon-btn border-2 border-slate-700 hover:border-primary text-white px-10 py-5 rounded-xl font-bold transition flex items-center gap-3 text-lg backdrop-blur-sm">
+                        <i class="fas fa-download"></i> Download CV
+                    </a>
+                </div>
+                <div class="flex gap-6 text-slate-400 text-3xl">
+                    <a href="https://linkedin.com/in/swabhiman-sarangi" target="_blank" class="hover:text-primary transition hover:scale-125 hover:rotate-12"><i class="fab fa-linkedin"></i></a>
+                    <a href="https://github.com/swabhimansarangi" target="_blank" class="hover:text-primary transition hover:scale-125 hover:rotate-12"><i class="fab fa-github"></i></a>
+                    <a href="mailto:swabhimanpersonal@gmail.com" class="hover:text-primary transition hover:scale-125 hover:rotate-12"><i class="fas fa-envelope"></i></a>
+                    <a href="tel:+919583412252" class="hover:text-primary transition hover:scale-125 hover:rotate-12"><i class="fas fa-phone"></i></a>
+                </div>
+            </div>
+            <div class="hidden md:flex justify-center relative">
+                <div class="orbit-container">
+                    <div class="orbit orbit-1">
+                        <div class="orbit-item" style="top: 0; left: 50%; transform: translate(-50%, -50%);">
+                            <i class="fab fa-aws text-orange-400"></i>
+                        </div>
+                        <div class="orbit-item" style="top: 50%; right: 0; transform: translate(50%, -50%);">
+                            <i class="fab fa-docker text-blue-400"></i>
+                        </div>
+                        <div class="orbit-item" style="bottom: 0; left: 50%; transform: translate(-50%, 50%);">
+                            <i class="fab fa-linux text-yellow-400"></i>
+                        </div>
+                        <div class="orbit-item" style="top: 50%; left: 0; transform: translate(-50%, -50%);">
+                            <i class="fas fa-code-branch text-secondary"></i>
+                        </div>
+                    </div>
+                    <div class="orbit orbit-2">
+                        <div class="orbit-item" style="top: 0; left: 50%; transform: translate(-50%, -50%);">
+                            <i class="fab fa-jenkins text-red-400"></i>
+                        </div>
+                        <div class="orbit-item" style="bottom: 0; left: 50%; transform: translate(-50%, 50%);">
+                            <i class="fas fa-cogs text-purple-400"></i>
+                        </div>
+                    </div>
+                    <div class="orbit orbit-3">
+                        <div class="orbit-item" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                            <i class="fas fa-cloud text-primary text-3xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        // --- CONFIGURATION ---
-        const PATH_LENGTH = 400;
-        const ZONES = [
-            { id: 'intro', start: 0, end: 40, name: 'Home Base' },
-            { id: 'about', start: 40, end: 90, name: 'Bio Data' },
-            { id: 'experience', start: 90, end: 160, name: 'Career Path' },
-            { id: 'projects', start: 160, end: 230, name: 'Project Lab' },
-            { id: 'skills', start: 230, end: 290, name: 'Skill Tree' },
-            { id: 'contact', start: 290, end: 350, name: 'Comms Link' }
-        ];
+    <!-- Stats Section -->
+    <section class="py-20 px-4 bg-gradient-to-b from-darker to-dark/30">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
+            <div class="text-center fade-in stagger-1">
+                <div class="counter" data-target="4">0</div>
+                <p class="text-slate-400 text-lg mt-2">Years Experience</p>
+            </div>
+            <div class="text-center fade-in stagger-2">
+                <div class="counter" data-target="40">0</div>
+                <p class="text-slate-400 text-lg mt-2">% Faster Deployments</p>
+            </div>
+            <div class="text-center fade-in stagger-3">
+                <div class="counter" data-target="35">0</div>
+                <p class="text-slate-400 text-lg mt-2">% Performance Boost</p>
+            </div>
+            <div class="text-center fade-in stagger-4">
+                <div class="counter" data-target="20">0</div>
+                <p class="text-slate-400 text-lg mt-2">% Reliability Improvement</p>
+            </div>
+        </div>
+    </section>
 
-        // --- STATE ---
-        let scene, camera, renderer, composer;
-        let player, mixer;
-        let scrollPos = 0;
-        let targetScrollPos = 0;
-        let currentZoneIdx = -1;
-        let isDragging = false;
-        let prevMouse = { x: 0, y: 0 };
-        let camAngle = { x: 0, y: Math.PI }; // Start looking forward
-        let starField;
-        
-        // --- HELPERS ---
-        // Generate a winding path
-        function getPathPosition(t) {
-            const x = Math.sin(t * 0.03) * 30 + Math.sin(t * 0.01) * 10;
-            const z = -t;
-            const y = 0;
-            return new THREE.Vector3(x, y, z);
-        }
+    <!-- About Section -->
+    <section id="about" class="py-32 bg-gradient-to-b from-dark/30 to-darker px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-20 fade-in">
+                <h2 class="text-5xl md:text-6xl font-black text-white mb-6">Professional Summary</h2>
+                <p class="text-slate-400 text-xl">Systems Engineer with 4 years of IT experience transitioning into DevOps</p>
+            </div>
+            <div class="glow-border p-12 rounded-3xl shadow-2xl fade-in">
+                <p class="text-slate-300 mb-10 leading-relaxed text-xl">
+                    Systems Engineer with 4 years of IT experience in PeopleSoft system administration, patch management, and troubleshooting. Currently transitioning into DevOps, with expertise in automation, CI/CD, and cloud.
+                </p>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Infrastructure automation deployment using Terraform & Ansible</p>
+                    </div>
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Implemented CI/CD Pipelines in Jenkins & ArgoCD, enabling faster deployments and reduced manual effort</p>
+                    </div>
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Strong knowledge of Kubernetes (EKS, Namespaces, RBAC, Volumes, HPA, Services) with exposure to real-time deployments</p>
+                    </div>
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Proficient in AWS cloud services (IAM, VPC, EC2, S3, ELB, RDS, Lambda, CloudWatch)</p>
+                    </div>
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Experience in containerization with Docker and image management using private registries</p>
+                    </div>
+                    <div class="flex gap-4 items-start p-6 rounded-2xl bg-darker/50 border-2 border-slate-800/50 hover:border-primary/50 transition-all hover:scale-105">
+                        <i class="fas fa-check-circle text-secondary mt-1 text-2xl"></i>
+                        <p class="text-slate-300 text-lg">Knowledge of monitoring & alerting using Prometheus & Grafana</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        function getPathRotation(t) {
-            const p1 = getPathPosition(t);
-            const p2 = getPathPosition(t + 1);
-            return Math.atan2(p2.x - p1.x, p2.z - p1.z);
-        }
+    <!-- Skills Section -->
+    <section id="skills" class="py-32 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-20 fade-in">
+                <h2 class="text-5xl md:text-6xl font-black text-white mb-6">Technical Arsenal</h2>
+                <p class="text-slate-400 text-xl max-w-3xl mx-auto">Tools and technologies I use to build, deploy, and monitor scalable infrastructure</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-1">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-primary/30">
+                        <i class="fas fa-infinity text-primary text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">DevOps Tools</h3>
+                    <p class="text-slate-400 leading-relaxed">Jenkins, Git, GitHub, ArgoCD, SonarQube, Nexus, Maven</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-2">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500/20 to-orange-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-orange-500/30">
+                        <i class="fab fa-aws text-orange-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Cloud Platforms</h3>
+                    <p class="text-slate-400 leading-relaxed">AWS (EC2, S3, IAM, VPC, RDS, CloudWatch, Lambda, EKS, Cloud Security, Load Balancing), Azure</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-3">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-blue-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-blue-500/30">
+                        <i class="fab fa-docker text-blue-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Containers & Orchestration</h3>
+                    <p class="text-slate-400 leading-relaxed">Docker, Kubernetes (EKS, Helm, Kustomize, Kops)</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-purple-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-purple-500/30">
+                        <i class="fas fa-cogs text-purple-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Infrastructure as Code</h3>
+                    <p class="text-slate-400 leading-relaxed">Terraform, Ansible</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-5">
+                    <div class="w-16 h-16 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-secondary/30">
+                        <i class="fas fa-chart-line text-secondary text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Monitoring & Logging</h3>
+                    <p class="text-slate-400 leading-relaxed">Prometheus, Grafana, CloudWatch</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-1">
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-500/20 to-red-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-red-500/30">
+                        <i class="fas fa-server text-red-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Web & DB Servers</h3>
+                    <p class="text-slate-400 leading-relaxed">Apache, Nginx, Tomcat, RDS</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-2">
+                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-yellow-500/30">
+                        <i class="fab fa-linux text-yellow-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">OS & Scripting</h3>
+                    <p class="text-slate-400 leading-relaxed">Linux (Ubuntu, RHEL), Shell scripting</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-3">
+                    <div class="w-16 h-16 bg-gradient-to-br from-pink-500/20 to-pink-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-pink-500/30">
+                        <i class="fas fa-users text-pink-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">PeopleSoft & IT Skills</h3>
+                    <p class="text-slate-400 leading-relaxed">PeopleTools, Change Assistant, Data Mover, Application/Web Server management, Patch management, production support</p>
+                </div>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 rounded-2xl flex items-center justify-center mb-6 border-2 border-indigo-500/30">
+                        <i class="fas fa-handshake text-indigo-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-white font-black text-2xl mb-4">Soft Skills</h3>
+                    <p class="text-slate-400 leading-relaxed">Collaboration, Problem-solving, Adaptability, Effective Communication</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        function createToonMaterial(color, emissive = 0x000000) {
-            // Create a gradient map for toon shading
-            const canvas = document.createElement('canvas');
-            canvas.width = 4; canvas.height = 1;
-            const ctx = canvas.getContext('2d');
-            const gradient = ctx.createLinearGradient(0, 0, 4, 0);
-            gradient.addColorStop(0, '#444');
-            gradient.addColorStop(0.5, '#888');
-            gradient.addColorStop(1, '#fff');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0,0,4,1);
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter;
-
-            return new THREE.MeshToonMaterial({
-                color: color,
-                gradientMap: tex,
-                emissive: emissive,
-                emissiveIntensity: 0.5
-            });
-        }
-
-        // --- INITIALIZATION ---
-        function init() {
-            // Scene Setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            scene.fog = new THREE.FogExp2(0x050510, 0.015);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    <!-- Experience Section -->
+    <section id="experience" class="py-32 bg-gradient-to-b from-dark/30 to-darker px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-20 fade-in">
+                <h2 class="text-5xl md:text-6xl font-black text-white mb-6">Professional Journey</h2>
+                <p class="text-slate-400 text-xl">4 Years of IT Experience & System Administration</p>
+            </div>
             
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            <div class="space-y-12">
+                <div class="timeline-item fade-in">
+                    <div class="glow-border p-10 rounded-3xl shadow-2xl hover:border-primary/50 transition-all">
+                        <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
+                            <h3 class="text-3xl font-black text-white">Systems Engineer (PeopleSoft)</h3>
+                            <span class="text-primary text-sm font-bold bg-primary/10 px-5 py-2.5 rounded-full border-2 border-primary/30 backdrop-blur-sm">Oct 2022 - Oct 2024</span>
+                        </div>
+                        <p class="text-secondary font-bold text-xl mb-6">nSoln India, Bhubaneswar, Odisha</p>
+                        <ul class="space-y-4 text-slate-300 text-lg">
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Installed, configured, and maintained PeopleSoft environments on Windows servers</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Applied bug fixes, patches, and upgrades (PeopleTools & PUM), improving reliability by 20%</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Managed Application Server, Web Server, and Process Scheduler domains</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Configured Integration Broker for interfacing applications, reducing integration errors by 20%</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Implemented Elasticsearch and global search, improving query performance by 35%</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Provided production support for PeopleSoft applications</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-secondary mt-2"></i> Experience with server maintenance, patch management, automation, and troubleshooting</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in">
+                    <div class="glow-border p-10 rounded-3xl shadow-2xl hover:border-secondary/50 transition-all">
+                        <div class="flex flex-wrap justify-between items-start mb-4 gap-4">
+                            <h3 class="text-3xl font-black text-white">Systems Trainee</h3>
+                            <span class="text-secondary text-sm font-bold bg-secondary/10 px-5 py-2.5 rounded-full border-2 border-secondary/30 backdrop-blur-sm">Jun 2020 - Oct 2022</span>
+                        </div>
+                        <p class="text-primary font-bold text-xl mb-6">nSoln India, Bhubaneswar, Odisha</p>
+                        <ul class="space-y-4 text-slate-300 text-lg">
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-primary mt-2"></i> Trained in SQL Server, PeopleSoft, and Procurement Testing</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-primary mt-2"></i> Managed production alerts and troubleshooting for live systems</li>
+                            <li class="flex gap-4"><i class="fas fa-check-circle text-primary mt-2"></i> Assisted with web scraping, website testing, and content development projects</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-            // Post Processing (Bloom)
-            const renderScene = new RenderPass(scene, camera);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.2;
-            bloomPass.strength = 1.2; // Glow intensity
-            bloomPass.radius = 0.5;
+    <!-- Projects Section -->
+    <section id="projects" class="py-32 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-20 fade-in">
+                <h2 class="text-5xl md:text-6xl font-black text-white mb-6">Featured Projects</h2>
+                <p class="text-slate-400 text-xl max-w-3xl mx-auto">Hands-on implementations of CI/CD, Cloud Infrastructure, and Microservices</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <div class="project-card glow-border rounded-3xl overflow-hidden shadow-2xl fade-in stagger-1">
+                    <div class="h-64 bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center relative">
+                        <i class="fas fa-shopping-cart text-8xl text-white/30"></i>
+                        <div class="absolute top-5 right-5 bg-darker/90 backdrop-blur-md px-4 py-2 rounded-full border-2 border-primary/50">
+                            <span class="text-primary text-sm font-black">DevOps</span>
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col">
+                        <h3 class="text-2xl font-black text-white mb-4">E-Commerce CI/CD Pipeline</h3>
+                        <p class="text-slate-400 mb-6 flex-1 leading-relaxed">End-to-end CI/CD pipeline for a Flipkart-like system. Reduced deployment time by 40% using Jenkins and automated AWS infrastructure via Terraform.</p>
+                        <ul class="text-slate-400 mb-6 space-y-3">
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-primary mt-1.5"></i> Automated infrastructure provisioning with Terraform on AWS</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-primary mt-1.5"></i> Deployed applications on Tomcat & Nginx using Ansible</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-primary mt-1.5"></i> Configured monitoring dashboards in Prometheus & Grafana</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-primary mt-1.5"></i> Secured secrets using Ansible Vault</li>
+                        </ul>
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Terraform</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Jenkins</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">AWS</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Ansible</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Prometheus</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Grafana</span>
+                        </div>
+                        <a href="https://github.com/swabhimansarangi" target="_blank" class="text-primary hover:text-sky-400 font-bold flex items-center gap-2 transition group">
+                            View Code <i class="fas fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="project-card glow-border rounded-3xl overflow-hidden shadow-2xl fade-in stagger-2">
+                    <div class="h-64 bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center relative">
+                        <i class="fas fa-network-wired text-8xl text-white/30"></i>
+                        <div class="absolute top-5 right-5 bg-darker/90 backdrop-blur-md px-4 py-2 rounded-full border-2 border-blue-500/50">
+                            <span class="text-blue-400 text-sm font-black">Kubernetes</span>
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col">
+                        <h3 class="text-2xl font-black text-white mb-4">K8s Microservices Deployment</h3>
+                        <p class="text-slate-400 mb-6 flex-1 leading-relaxed">Automated EKS cluster creation using Terraform. Implemented GitOps via ArgoCD, Helm charts, and configured HPA for auto-scaling workloads.</p>
+                        <ul class="text-slate-400 mb-6 space-y-3">
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-blue-400 mt-1.5"></i> Built Docker images and pushed to private registry</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-blue-400 mt-1.5"></i> Implemented Helm charts and ArgoCD for GitOps</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-blue-400 mt-1.5"></i> Configured HPA for auto-scaling based on demand</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-blue-400 mt-1.5"></i> Set up RBAC, namespaces, and resource quotas</li>
+                        </ul>
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Kubernetes</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Docker</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">ArgoCD</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Helm</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Terraform</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">AWS</span>
+                        </div>
+                        <a href="https://github.com/swabhimansarangi" target="_blank" class="text-primary hover:text-sky-400 font-bold flex items-center gap-2 transition group">
+                            View Code <i class="fas fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="project-card glow-border rounded-3xl overflow-hidden shadow-2xl fade-in stagger-3">
+                    <div class="h-64 bg-gradient-to-br from-orange-500/30 to-red-500/30 flex items-center justify-center relative">
+                        <i class="fas fa-file-alt text-8xl text-white/30"></i>
+                        <div class="absolute top-5 right-5 bg-darker/90 backdrop-blur-md px-4 py-2 rounded-full border-2 border-orange-500/50">
+                            <span class="text-orange-400 text-sm font-black">NLP</span>
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col">
+                        <h3 class="text-2xl font-black text-white mb-4">Odia Plagiarism Detection</h3>
+                        <p class="text-slate-400 mb-6 flex-1 leading-relaxed">Full-stack ASP.NET app with Python/Scrapy data pipeline. Used Apache Lucene for indexing and Fuzzy Neural Networks for NLP-based similarity checking.</p>
+                        <ul class="text-slate-400 mb-6 space-y-3">
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-orange-400 mt-1.5"></i> Engineered Python (Scrapy) web scraping pipeline</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-orange-400 mt-1.5"></i> Implemented NLP with Apache Lucene indexing</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-orange-400 mt-1.5"></i> Built full-stack ASP.NET with Admin/Student modules</li>
+                            <li class="flex gap-3"><i class="fas fa-arrow-right text-orange-400 mt-1.5"></i> Fuzzy Neural Network-based plagiarism checking</li>
+                        </ul>
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Python</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Java</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">NLP</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">ASP.NET</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Linux</span>
+                            <span class="text-sm bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold">Apache Lucene</span>
+                        </div>
+                        <a href="https://github.com/swabhimansarangi" target="_blank" class="text-primary hover:text-sky-400 font-bold flex items-center gap-2 transition group">
+                            View Code <i class="fas fa-arrow-right group-hover:translate-x-2 transition-transform"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Education & Certifications -->
+    <section id="education" class="py-32 bg-gradient-to-b from-darker to-dark/30 px-4">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-16">
+            <div class="fade-in">
+                <h2 class="text-4xl font-black text-white mb-10 flex items-center gap-4">
+                    <i class="fas fa-graduation-cap text-primary"></i> Education
+                </h2>
+                <div class="glow-border p-10 rounded-3xl shadow-2xl hover:border-primary/50 transition-all">
+                    <h3 class="text-2xl font-black text-white mb-3">Master of Technology (M.Tech)</h3>
+                    <p class="text-primary font-bold text-xl mb-3">Computer Science</p>
+                    <p class="text-slate-400 text-lg">Utkal University</p>
+                    <p class="text-slate-500 mt-3">2018 – 2020</p>
+                </div>
+            </div>
+            <div class="fade-in">
+                <h2 class="text-4xl font-black text-white mb-10 flex items-center gap-4">
+                    <i class="fas fa-certificate text-secondary"></i> Certifications
+                </h2>
+                <div class="space-y-5">
+                    <div class="glow-border p-8 rounded-3xl shadow-2xl hover:border-primary/50 transition-all">
+                        <div class="flex items-start gap-5">
+                            <i class="fab fa-aws text-4xl text-orange-400 mt-1"></i>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <h3 class="text-white font-bold text-lg">AWS Solutions Architect – Associate</h3>
+                                    <span class="status-badge status-progress">
+                                        <i class="fas fa-clock"></i>Expected Nov 2026
+                                    </span>
+                                </div>
+                                <p class="text-slate-400">Amazon Web Services</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glow-border p-8 rounded-3xl shadow-2xl hover:border-primary/50 transition-all">
+                        <div class="flex items-start gap-5">
+                            <i class="fas fa-layer-group text-4xl text-purple-400 mt-1"></i>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <h3 class="text-white font-bold text-lg">HashiCorp Terraform Associate (003)</h3>
+                                    <span class="status-badge status-progress">
+                                        <i class="fas fa-clock"></i>Expected Dec 2026
+                                    </span>
+                                </div>
+                                <p class="text-slate-400">HashiCorp</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glow-border p-8 rounded-3xl shadow-2xl hover:border-primary/50 transition-all">
+                        <div class="flex items-start gap-5">
+                            <i class="fas fa-user-shield text-4xl text-yellow-400 mt-1"></i>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <h3 class="text-white font-bold text-lg">Certified Ethical Hacker (CEH-v13)</h3>
+                                    <span class="status-badge status-progress">
+                                        <i class="fas fa-clock"></i>Expected Jan 2027
+                                    </span>
+                                </div>
+                                <p class="text-slate-400">EC-Council</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glow-border p-8 rounded-3xl shadow-2xl hover:border-slate-700 transition-all opacity-75">
+                        <div class="flex items-start gap-5">
+                            <i class="fas fa-user-shield text-4xl text-slate-500 mt-1"></i>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <h3 class="text-white font-bold text-lg">Certified Ethical Hacker (CEH-v9)</h3>
+                                    <span class="status-badge status-expired">
+                                        <i class="fas fa-times-circle"></i> Expired
+                                    </span>
+                                </div>
+                                <p class="text-slate-400">EC-Council | 2016 - 2019</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-32 px-4">
+        <div class="max-w-6xl mx-auto text-center">
+            <h2 class="text-5xl md:text-6xl font-black text-white mb-6 fade-in">Let's Build Something Great</h2>
+            <p class="text-slate-400 mb-16 max-w-3xl mx-auto text-xl fade-in">I am currently open to new DevOps and Cloud Engineering opportunities. Feel free to reach out if you want to collaborate or just say hi!</p>
             
-            composer = new EffectComposer(renderer);
-            composer.addPass(renderScene);
-            composer.addPass(bloomPass);
+            <div class="grid md:grid-cols-4 gap-8 mb-16">
+                <a href="mailto:swabhimanpersonal@gmail.com" class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-1 hover:scale-105 transition-all group">
+                    <i class="fas fa-envelope text-5xl text-primary mb-5 group-hover:scale-125 group-hover:rotate-12 transition-all"></i>
+                    <h3 class="text-white font-black mb-3 text-xl">Email</h3>
+                    <p class="text-slate-400">swabhimanpersonal@gmail.com</p>
+                </a>
+                <a href="tel:+919583412252" class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-2 hover:scale-105 transition-all group">
+                    <i class="fas fa-phone text-5xl text-primary mb-5 group-hover:scale-125 group-hover:rotate-12 transition-all"></i>
+                    <h3 class="text-white font-black mb-3 text-xl">Phone</h3>
+                    <p class="text-slate-400">+91-9583412252</p>
+                </a>
+                <a href="https://linkedin.com/in/swabhiman-sarangi" target="_blank" class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-3 hover:scale-105 transition-all group">
+                    <i class="fab fa-linkedin text-5xl text-primary mb-5 group-hover:scale-125 group-hover:rotate-12 transition-all"></i>
+                    <h3 class="text-white font-black mb-3 text-xl">LinkedIn</h3>
+                    <p class="text-slate-400">Connect with me</p>
+                </a>
+                <a href="https://github.com/swabhimansarangi" target="_blank" class="glow-border p-10 rounded-3xl shadow-2xl fade-in stagger-4 hover:scale-105 transition-all group">
+                    <i class="fab fa-github text-5xl text-primary mb-5 group-hover:scale-125 group-hover:rotate-12 transition-all"></i>
+                    <h3 class="text-white font-black mb-3 text-xl">GitHub</h3>
+                    <p class="text-slate-400">View my code</p>
+                </a>
+            </div>
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
+            <a href="mailto:swabhimanpersonal@gmail.com" class="neon-btn inline-block bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white px-12 py-6 rounded-2xl font-black transition text-2xl shadow-2xl shadow-primary/40 fade-in">
+                <i class="fas fa-paper-plane mr-3"></i> Send me a message
+            </a>
+        </div>
+    </section>
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(50, 100, 50);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
+    <!-- Footer -->
+    <footer class="py-12 border-t-2 border-slate-800 text-center bg-darker">
+        <p class="text-slate-500 text-lg">&copy; 2026 Swabhiman Sarangi. Crafted with <i class="fas fa-heart text-red-500 animate-pulse"></i> and Cloud Technologies.</p>
+    </footer>
 
-            // World Generation
-            createStarfield();
-            createPathVisuals();
-            createPlayer();
-            
-            // Zones
-            createIntroZone(20);
-            createAboutZone(65);
-            createExperienceZone(125);
-            createProjectsZone(195);
-            createSkillsZone(260);
-            createContactZone(320);
+    <script>
+        // Custom Cursor
+        const cursor = document.querySelector('.cursor');
+        const cursorDot = document.querySelector('.cursor-dot');
 
-            // Event Listeners
-            window.addEventListener('resize', onResize);
-            document.addEventListener('wheel', onScroll);
-            document.addEventListener('mousedown', onMouseDown);
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-            document.addEventListener('touchstart', onTouchStart, {passive: false});
-            document.addEventListener('touchmove', onTouchMove, {passive: false});
-            document.addEventListener('touchend', onMouseUp);
-
-            // Start Loop
-            animate();
-        }
-
-        // --- OBJECT CREATION ---
-
-        function createStarfield() {
-            const geometry = new THREE.BufferGeometry();
-            const count = 2000;
-            const positions = new Float32Array(count * 3);
-            for(let i=0; i<count*3; i++) {
-                positions[i] = (Math.random() - 0.5) * 400;
-            }
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const material = new THREE.PointsMaterial({size: 0.5, color: 0xffffff, transparent: true, opacity: 0.8});
-            starField = new THREE.Points(geometry, material);
-            scene.add(starField);
-        }
-
-        function createPathVisuals() {
-            // Create a glowing floor strip
-            const points = [];
-            for(let i=0; i<=PATH_LENGTH; i+=2) {
-                points.push(getPathPosition(i));
-            }
-            const curve = new THREE.CatmullRomCurve3(points);
-            const tubeGeo = new THREE.TubeGeometry(curve, 100, 4, 8, false); // Wide flat tube
-            const tubeMat = new THREE.MeshBasicMaterial({ 
-                color: 0x001133, 
-                wireframe: true,
-                transparent: true,
-                opacity: 0.3
-            });
-            const mesh = new THREE.Mesh(tubeGeo, tubeMat);
-            mesh.scale.y = 0.1; // Flatten it
-            scene.add(mesh);
-        }
-
-        function createPlayer() {
-            player = new THREE.Group();
-
-            // Body
-            const bodyGeo = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
-            const bodyMat = createToonMaterial(0x00f3ff, 0x0044aa);
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 1;
-            body.castShadow = true;
-            player.add(body);
-
-            // Head
-            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
-            const headMat = createToonMaterial(0xffffff, 0x222222);
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.8;
-            player.add(head);
-
-            // Floating Ring
-            const ringGeo = new THREE.TorusGeometry(0.7, 0.05, 8, 32);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0xbc13fe });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.PI/2;
-            ring.position.y = 0.5;
-            player.userData.ring = ring;
-            player.add(ring);
-
-            // Light
-            const pl = new THREE.PointLight(0x00f3ff, 1, 15);
-            pl.position.y = 2;
-            player.add(pl);
-
-            scene.add(player);
-        }
-
-        // --- ZONE BUILDERS ---
-
-        function createIntroZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-            
-            // Giant floating logo/text representation
-            const geo = new THREE.IcosahedronGeometry(4, 1);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.y = 5;
-            group.add(mesh);
-            
-            // Particles
-            const pGeo = new THREE.BufferGeometry();
-            const pCount = 100;
-            const pPos = new Float32Array(pCount*3);
-            for(let i=0; i<pCount*3; i++) pPos[i] = (Math.random()-0.5)*15;
-            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-            const pMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.1});
-            const pts = new THREE.Points(pGeo, pMat);
-            pts.position.y = 5;
-            group.add(pts);
-
-            group.userData = { type: 'intro', mesh: mesh, pts: pts };
-            scene.add(group);
-        }
-
-        function createAboutZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-
-            // Trees/Data structures
-            for(let i=0; i<10; i++) {
-                const h = Math.random() * 5 + 2;
-                const geo = new THREE.BoxGeometry(0.5, h, 0.5);
-                const mat = createToonMaterial(0x00ff88);
-                const tree = new THREE.Mesh(geo, mat);
-                tree.position.set((Math.random()-0.5)*30, h/2, (Math.random()-0.5)*30);
-                group.add(tree);
-            }
-            scene.add(group);
-        }
-
-        function createExperienceZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-
-            // Skyscrapers representing career growth
-            const heights = [5, 8, 12];
-            heights.forEach((h, i) => {
-                const geo = new THREE.BoxGeometry(4, h, 4);
-                const mat = createToonMaterial(0xff0055, 0x440011);
-                const build = new THREE.Mesh(geo, mat);
-                build.position.set(i===0?-8 : i===1?8 : 0, h/2, i===2?0 : (Math.random()>0.5?5:-5));
-                
-                // Windows
-                const winGeo = new THREE.PlaneGeometry(3, h-1);
-                const winMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-                const win = new THREE.Mesh(winGeo, winMat);
-                win.position.z = 2.01;
-                win.position.y = 0;
-                build.add(win);
-                
-                group.add(build);
-            });
-            scene.add(group);
-        }
-
-        function createProjectsZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-
-            // Floating Crystals
-            for(let i=0; i<5; i++) {
-                const geo = new THREE.OctahedronGeometry(1.5);
-                const mat = createToonMaterial(Math.random() * 0xffffff, Math.random() * 0xffffff);
-                const cry = new THREE.Mesh(geo, mat);
-                cry.position.set((Math.random()-0.5)*20, 3, (Math.random()-0.5)*20);
-                cry.userData = { speed: Math.random()*0.02, offset: Math.random()*Math.PI };
-                group.add(cry);
-            }
-            group.userData = { type: 'projects' };
-            scene.add(group);
-        }
-
-        function createSkillsZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-
-            // Orbiting spheres
-            const centerGeo = new THREE.SphereGeometry(2);
-            const centerMat = new THREE.MeshBasicMaterial({ color: 0xbc13fe, wireframe: true });
-            const center = new THREE.Mesh(centerGeo, centerMat);
-            center.position.y = 4;
-            group.add(center);
-
-            const satellites = [];
-            for(let i=0; i<8; i++) {
-                const sat = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5),
-                    new THREE.MeshBasicMaterial({ color: 0xffffff })
-                );
-                sat.userData = { angle: (i/8)*Math.PI*2, radius: 4, speed: 0.02 };
-                satellites.push(sat);
-                group.add(sat);
-            }
-            group.userData = { type: 'skills', sats: satellites, center: center };
-            scene.add(group);
-        }
-
-        function createContactZone(zPos) {
-            const group = new THREE.Group();
-            const pos = getPathPosition(zPos);
-            group.position.copy(pos);
-
-            // Portal
-            const geo = new THREE.TorusGeometry(5, 0.5, 16, 100);
-            const mat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
-            const portal = new THREE.Mesh(geo, mat);
-            portal.position.y = 5;
-            group.add(portal);
-            
-            // Inner glow
-            const glow = new THREE.PointLight(0x00f3ff, 2, 20);
-            glow.position.y = 5;
-            group.add(glow);
-
-            group.userData = { type: 'contact', portal: portal };
-            scene.add(group);
-        }
-
-        // --- LOGIC ---
-
-        function updatePlayer(dt) {
-            // Smooth Scroll
-            scrollPos += (targetScrollPos - scrollPos) * 0.05;
-            
-            // Bounds
-            if(scrollPos < 0) scrollPos = 0;
-            if(scrollPos > PATH_LENGTH) scrollPos = PATH_LENGTH;
-
-            // Move Player
-            const pos = getPathPosition(scrollPos);
-            player.position.lerp(pos, 0.1);
-            
-            // Face direction
-            const rot = getPathRotation(scrollPos);
-            player.rotation.y = rot + Math.PI; // Face forward along path
-
-            // Animate Ring
-            player.userData.ring.rotation.z += dt;
-            player.userData.ring.rotation.x = (Math.PI/2) + Math.sin(scrollPos * 0.1) * 0.2;
-
-            // Camera Follow
-            const camDist = window.innerWidth < 768 ? 12 : 8;
-            const camHeight = window.innerWidth < 768 ? 6 : 4;
-            
-            // Calculate ideal camera position based on orbit angles
-            const cx = player.position.x + Math.sin(camAngle.y) * camDist;
-            const cz = player.position.z + Math.cos(camAngle.y) * camDist;
-            const cy = player.position.y + camHeight + (camAngle.x * 5);
-
-            camera.position.lerp(new THREE.Vector3(cx, cy, cz), 0.1);
-            camera.lookAt(player.position.x, player.position.y + 2, player.position.z);
-
-            // Update Starfield to loop around camera
-            starField.position.x = camera.position.x;
-            starField.position.z = camera.position.z;
-
-            updateUI();
-        }
-
-        function updateEnvironment(time) {
-            scene.children.forEach(child => {
-                if(!child.userData.type) return;
-
-                if(child.userData.type === 'intro') {
-                    child.userData.mesh.rotation.y += 0.005;
-                    child.userData.mesh.rotation.x += 0.002;
-                    child.userData.pts.rotation.y -= 0.01;
-                }
-                else if(child.userData.type === 'projects') {
-                    child.children.forEach(c => {
-                        if(c.geometry.type === 'OctahedronGeometry') {
-                            c.rotation.y += c.userData.speed;
-                            c.rotation.x += c.userData.speed;
-                            c.position.y = 3 + Math.sin(time * 2 + c.userData.offset);
-                        }
-                    });
-                }
-                else if(child.userData.type === 'skills') {
-                    child.userData.center.rotation.y += 0.01;
-                    child.userData.center.rotation.x += 0.01;
-                    child.userData.sats.forEach(sat => {
-                        sat.userData.angle += sat.userData.speed;
-                        sat.position.x = Math.cos(sat.userData.angle) * sat.userData.radius;
-                        sat.position.z = Math.sin(sat.userData.angle) * sat.userData.radius;
-                        sat.position.y = 4 + Math.sin(sat.userData.angle * 2);
-                    });
-                }
-                else if(child.userData.type === 'contact') {
-                    child.userData.portal.rotation.z -= 0.02;
-                }
-            });
-        }
-
-        function updateUI() {
-            // Progress Bar
-            const pct = (scrollPos / PATH_LENGTH) * 100;
-            document.getElementById('progress-bar').style.width = `${pct}%`;
-
-            // Zone Detection
-            let activeZoneIdx = 0;
-            ZONES.forEach((z, idx) => {
-                if(scrollPos >= z.start && scrollPos < z.end) activeZoneIdx = idx;
-            });
-
-            if(activeZoneIdx !== currentZoneIdx) {
-                currentZoneIdx = activeZoneIdx;
-                const zone = ZONES[currentZoneIdx];
-                
-                // Update Text
-                document.getElementById('zone-name').innerText = zone.name;
-
-                // Switch Panels
-                document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
-                const nextPanel = document.getElementById(`panel-${zone.id}`);
-                if(nextPanel) nextPanel.classList.add('active');
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const dt = 0.016; // approx 60fps
-            const time = performance.now() * 0.001;
-
-            updatePlayer(dt);
-            updateEnvironment(time);
-
-            composer.render();
-        }
-
-        // --- INPUT HANDLING ---
-
-        function onScroll(e) {
-            targetScrollPos += e.deltaY * 0.05;
-        }
-
-        function onMouseDown(e) {
-            isDragging = true;
-            prevMouse.x = e.clientX;
-            prevMouse.y = e.clientY;
-        }
-
-        function onMouseMove(e) {
-            if(!isDragging) return;
-            const dx = e.clientX - prevMouse.x;
-            const dy = e.clientY - prevMouse.y;
-            
-            camAngle.y -= dx * 0.005;
-            camAngle.x += dy * 0.005;
-            // Clamp vertical look
-            camAngle.x = Math.max(-1, Math.min(1, camAngle.x));
-
-            prevMouse.x = e.clientX;
-            prevMouse.y = e.clientY;
-        }
-
-        function onMouseUp() { isDragging = false; }
-
-        function onTouchStart(e) {
-            if(e.touches.length === 1) {
-                isDragging = true;
-                prevMouse.x = e.touches[0].clientX;
-                prevMouse.y = e.touches[0].clientY;
-            }
-        }
-
-        function onTouchMove(e) {
-            if(!isDragging || e.touches.length !== 1) return;
-            e.preventDefault(); // Stop page scroll
-            const dx = e.touches[0].clientX - prevMouse.x;
-            const dy = e.touches[0].clientY - prevMouse.y;
-            
-            camAngle.y -= dx * 0.005;
-            camAngle.x += dy * 0.005;
-            camAngle.x = Math.max(-1, Math.min(1, camAngle.x));
-
-            prevMouse.x = e.touches[0].clientX;
-            prevMouse.y = e.touches[0].clientY;
-        }
-
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // --- STARTUP ---
-        document.getElementById('start-btn').addEventListener('click', () => {
-            document.getElementById('start-screen').style.opacity = 0;
-            setTimeout(() => {
-                document.getElementById('start-screen').style.display = 'none';
-            }, 1000);
-            init();
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            cursorDot.style.left = e.clientX + 'px';
+            cursorDot.style.top = e.clientY + 'px';
         });
 
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // Loading Screen
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelector('.loader').classList.add('hidden');
+            }, 1500);
+        });
+
+        // Particles Canvas
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const particleCount = 100;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(6, 182, 212, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function connectParticles() {
+            for (let a = 0; a < particles.length; a++) {
+                for (let b = a; b < particles.length; b++) {
+                    const dx = particles[a].x - particles[b].x;
+                    const dy = particles[a].y - particles[b].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 100) {
+                        ctx.strokeStyle = `rgba(6, 182, 212, ${0.2 * (1 - distance / 100)})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[a].x, particles[a].y);
+                        ctx.lineTo(particles[b].x, particles[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        animateParticles();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Scroll Progress Bar
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('scrollProgress').style.width = scrolled + '%';
+        });
+
+        // Counter Animation
+        const counters = document.querySelectorAll('.counter');
+        const speed = 200;
+
+        const animateCounter = (counter) => {
+            const target = +counter.getAttribute('data-target');
+            const count = +counter.innerText;
+            const inc = target / speed;
+
+            if (count < target) {
+                counter.innerText = Math.ceil(count + inc);
+                setTimeout(() => animateCounter(counter), 20);
+            } else {
+                counter.innerText = target;
+            }
+        };
+
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    counterObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        counters.forEach(counter => counterObserver.observe(counter));
+
+        // Fade In Animation
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+
+        // Smooth Scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Mobile Menu
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const closeMobileMenu = document.getElementById('closeMobileMenu');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.add('active');
+        });
+
+        closeMobileMenu.addEventListener('click', () => {
+            mobileMenu.classList.remove('active');
+        });
+
+        mobileMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+            });
+        });
     </script>
+
 </body>
 </html>
